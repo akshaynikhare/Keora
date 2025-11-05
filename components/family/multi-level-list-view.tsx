@@ -3,10 +3,12 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronUp, ChevronDown, Edit2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Edit2, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MemberPreviewModal from './member-preview-modal';
 import EditMemberModal from './edit-member-modal';
+import { MemberForm } from './member-form';
 
 interface FamilyMember {
   id: string;
@@ -56,6 +58,11 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
   const [expandedDown, setExpandedDown] = useState(false);
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [quickAddConfig, setQuickAddConfig] = useState<{
+    memberId: string;
+    relationshipType: 'PARENT' | 'CHILD' | 'SPOUSE' | 'SIBLING';
+  } | null>(null);
   const primaryRef = useRef<HTMLDivElement>(null);
 
   const handleEditMember = (memberId: string) => {
@@ -64,6 +71,30 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
       setEditingMember(member);
       setSelectedMember(null); // Close preview modal if open
     }
+  };
+
+  const handleQuickAddMember = (level: number) => {
+    const primary = members.find((m) => m.isPrimary);
+    if (!primary) return;
+
+    let relationshipType: 'PARENT' | 'CHILD' | 'SPOUSE' | 'SIBLING';
+
+    if (level < 0) {
+      // Adding to ancestor generation
+      relationshipType = 'PARENT';
+    } else if (level > 0) {
+      // Adding to descendant generation
+      relationshipType = 'CHILD';
+    } else {
+      // Same generation (sibling or spouse)
+      relationshipType = 'SIBLING';
+    }
+
+    setQuickAddConfig({
+      memberId: primary.id,
+      relationshipType,
+    });
+    setShowAddMemberModal(true);
   };
 
   const handleSaveMember = async (updatedData: Partial<FamilyMember>) => {
@@ -458,6 +489,15 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
               <span className="text-sm text-slate-600">
                 {generation.members.length} member{generation.members.length !== 1 ? 's' : ''}
               </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleQuickAddMember(generation.level)}
+                className="flex items-center gap-1"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add
+              </Button>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {generation.members.map((member) => (
@@ -520,6 +560,35 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
           onSave={handleSaveMember}
         />
       )}
+
+      {/* Quick Add Member Modal */}
+      <Dialog open={showAddMemberModal} onOpenChange={setShowAddMemberModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Family Member</DialogTitle>
+            <DialogDescription>
+              {quickAddConfig && (
+                <span className="text-green-700 font-medium">
+                  Pre-configured to add as {quickAddConfig.relationshipType.toLowerCase()} relation
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <MemberForm
+            onSuccess={() => {
+              setShowAddMemberModal(false);
+              setQuickAddConfig(null);
+              window.location.reload();
+            }}
+            onCancel={() => {
+              setShowAddMemberModal(false);
+              setQuickAddConfig(null);
+            }}
+            existingMembers={members.map(m => ({ id: m.id, name: m.name }))}
+            preselectedRelationship={quickAddConfig || undefined}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

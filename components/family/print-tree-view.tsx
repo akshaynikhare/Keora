@@ -3,6 +3,12 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import dynamic from 'next/dynamic';
+
+const InteractiveTreeView = dynamic(
+  () => import('./interactive-tree-view'),
+  { ssr: false }
+);
 
 interface FamilyMember {
   id: string;
@@ -11,6 +17,26 @@ interface FamilyMember {
   dob?: string | null;
   gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
   isPrimary: boolean;
+  relationshipsFrom: Array<{
+    id: string;
+    memberId1: string;
+    memberId2: string;
+    relationshipType: string;
+    member2: {
+      id: string;
+      name: string;
+    };
+  }>;
+  relationshipsTo: Array<{
+    id: string;
+    memberId1: string;
+    memberId2: string;
+    relationshipType: string;
+    member1: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 interface PrintTreeViewProps {
@@ -18,12 +44,13 @@ interface PrintTreeViewProps {
   paperSize: 'A4' | 'A3' | 'A2';
   onPaperSizeChange: (size: 'A4' | 'A3' | 'A2') => void;
   onClose: () => void;
+  showLegend?: boolean;
 }
 
 const PAPER_DIMENSIONS = {
-  A4: { width: '210mm', height: '297mm', label: 'A4 (210×297mm)' },
-  A3: { width: '297mm', height: '420mm', label: 'A3 (297×420mm)' },
-  A2: { width: '420mm', height: '594mm', label: 'A2 (420×594mm)' },
+  A4: { width: '297mm', height: '210mm', label: 'A4 Landscape (297×210mm)' },
+  A3: { width: '420mm', height: '297mm', label: 'A3 Landscape (420×297mm)' },
+  A2: { width: '594mm', height: '420mm', label: 'A2 Landscape (594×420mm)' },
 };
 
 export default function PrintTreeView({
@@ -31,31 +58,12 @@ export default function PrintTreeView({
   paperSize,
   onPaperSizeChange,
   onClose,
+  showLegend = true,
 }: PrintTreeViewProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const calculateAge = (dob?: string | null) => {
-    if (!dob) return null;
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  // Group members by generation for print layout
-  const groupedMembers = {
-    grandparents: members.filter((m) => !m.isPrimary), // Simplified for demo
-    parents: members.filter((m) => !m.isPrimary),
-    yourGeneration: members.filter((m) => m.isPrimary),
-    children: [],
   };
 
   const dimensions = PAPER_DIMENSIONS[paperSize];
@@ -96,85 +104,26 @@ export default function PrintTreeView({
             style={{
               width: dimensions.width,
               height: dimensions.height,
-              padding: '20mm',
+              padding: '10mm',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             {/* Title Section */}
-            <div className="bg-gray-900 text-white p-6 rounded-lg mb-8">
-              <h1 className="text-4xl font-bold mb-2">Family Tree</h1>
-              <p className="text-gray-300 text-lg">
-                {members.find((m) => m.isPrimary)?.name}'s Family
-              </p>
-              <p className="text-gray-400 text-sm mt-2">
-                {members.length} family members • Generated {new Date().toLocaleDateString()}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-lg mb-4 print:mb-2">
+              <h1 className="text-3xl font-bold mb-1">Family Tree</h1>
+              <p className="text-white text-sm">
+                {members.find((m) => m.isPrimary)?.name}'s Family • {members.length} members • {new Date().toLocaleDateString()}
               </p>
             </div>
 
-            {/* Tree Structure */}
-            <div className="space-y-8">
-              {/* Render members in a clean hierarchical layout */}
-              {members.map((member, index) => {
-                const age = calculateAge(member.dob);
-                const birthYear = member.dob ? new Date(member.dob).getFullYear() : null;
-                const bgColor =
-                  member.gender === 'MALE'
-                    ? 'bg-blue-100'
-                    : member.gender === 'FEMALE'
-                    ? 'bg-pink-100'
-                    : 'bg-purple-100';
-                const borderColor =
-                  member.gender === 'MALE'
-                    ? 'border-blue-400'
-                    : member.gender === 'FEMALE'
-                    ? 'border-pink-400'
-                    : 'border-purple-400';
-
-                return (
-                  <div
-                    key={member.id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border-2 ${bgColor} ${borderColor}`}
-                  >
-                    {/* Photo */}
-                    <div
-                      className={`w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-4 ${borderColor}`}
-                    >
-                      {member.photoUrl ? (
-                        <img
-                          src={member.photoUrl}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-white font-bold text-xl">
-                          {member.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold flex items-center gap-2">
-                        {member.name}
-                        {member.isPrimary && (
-                          <span className="text-xs bg-amber-500 text-white px-2 py-1 rounded-full">
-                            ⭐ Primary
-                          </span>
-                        )}
-                      </h3>
-                      {birthYear && (
-                        <p className="text-sm text-gray-700">
-                          Born: {birthYear}
-                          {age && ` (Age: ${age})`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Tree Visualization */}
+            <div className="flex-1 relative bg-slate-50 rounded-lg border-2 border-slate-200 overflow-hidden">
+              <InteractiveTreeView members={members} orientation="TB" />
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-4 border-t text-center text-gray-500 text-sm">
+            <div className="mt-2 text-center text-gray-500 text-xs print:text-[10px]">
               <p>Created with Keora Family Tree Builder</p>
             </div>
           </div>
@@ -185,7 +134,7 @@ export default function PrintTreeView({
       <style jsx global>{`
         @media print {
           @page {
-            size: ${dimensions.width} ${dimensions.height};
+            size: ${dimensions.width} ${dimensions.height} landscape;
             margin: 0;
           }
 
@@ -195,6 +144,20 @@ export default function PrintTreeView({
           }
 
           .print\\:hidden {
+            display: none !important;
+          }
+
+          .print\\:mb-2 {
+            margin-bottom: 0.5rem !important;
+          }
+
+          .print\\:text-\\[10px\\] {
+            font-size: 10px !important;
+          }
+
+          /* Hide ReactFlow controls in print */
+          .react-flow__controls,
+          .react-flow__panel {
             display: none !important;
           }
         }

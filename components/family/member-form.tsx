@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,9 +22,14 @@ interface MemberFormProps {
   member?: FamilyMember;
   onSuccess: () => void;
   onCancel: () => void;
+  existingMembers?: { id: string; name: string }[];
+  preselectedRelationship?: {
+    memberId: string;
+    relationshipType: 'PARENT' | 'CHILD' | 'SPOUSE' | 'SIBLING';
+  };
 }
 
-export function MemberForm({ member, onSuccess, onCancel }: MemberFormProps) {
+export function MemberForm({ member, onSuccess, onCancel, existingMembers = [], preselectedRelationship }: MemberFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<FamilyMember>({
@@ -36,6 +41,15 @@ export function MemberForm({ member, onSuccess, onCancel }: MemberFormProps) {
     location: member?.location || '',
     privacyLevel: member?.privacyLevel || 'FAMILY',
     isPrimary: member?.isPrimary || false,
+  });
+  const [relationshipData, setRelationshipData] = useState<{
+    enabled: boolean;
+    relatedMemberId: string;
+    relationshipType: 'PARENT' | 'CHILD' | 'SPOUSE' | 'SIBLING' | '';
+  }>({
+    enabled: !!preselectedRelationship,
+    relatedMemberId: preselectedRelationship?.memberId || '',
+    relationshipType: preselectedRelationship?.relationshipType || '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +68,19 @@ export function MemberForm({ member, onSuccess, onCancel }: MemberFormProps) {
           variant: 'destructive',
         });
         return;
+      }
+
+      // Validate relationship data if enabled
+      if (!member?.id && relationshipData.enabled) {
+        if (!relationshipData.relatedMemberId || !relationshipData.relationshipType) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please select a family member and relationship type',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
       }
 
       const url = member?.id
@@ -77,12 +104,46 @@ export function MemberForm({ member, onSuccess, onCancel }: MemberFormProps) {
         throw new Error(data.error || 'Failed to save family member');
       }
 
-      toast({
-        title: 'Success',
-        description: member?.id
-          ? 'Family member updated successfully'
-          : 'Family member created successfully',
-      });
+      // If creating a new member and relationship is enabled, create the relationship
+      if (!member?.id && relationshipData.enabled && data.member) {
+        const newMemberId = data.member.id;
+
+        const relationshipResponse = await fetch('/api/relationships', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            memberId1: relationshipData.relatedMemberId,
+            memberId2: newMemberId,
+            relationshipType: relationshipData.relationshipType,
+          }),
+        });
+
+        if (!relationshipResponse.ok) {
+          const relError = await relationshipResponse.json();
+          toast({
+            title: 'Warning',
+            description: `Member created but relationship failed: ${relError.error}`,
+            variant: 'destructive',
+          });
+          onSuccess();
+          return;
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Family member and relationship created successfully',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: member?.id
+            ? 'Family member updated successfully'
+            : 'Family member created successfully',
+        });
+      }
 
       onSuccess();
     } catch (error: any) {
@@ -206,6 +267,95 @@ export function MemberForm({ member, onSuccess, onCancel }: MemberFormProps) {
           This is my primary profile (myself)
         </Label>
       </div>
+
+      {/* Relationship Section - Only show when adding new member and there are existing members */}
+      {!member?.id && existingMembers.length > 0 && (
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center space-x-2 mb-3">
+            <input
+              type="checkbox"
+              id="addRelationship"
+              checked={relationshipData.enabled}
+              onChange={(e) =>
+                setRelationshipData({
+                  ...relationshipData,
+                  enabled: e.target.checked,
+                })
+              }
+              className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+              disabled={!!preselectedRelationship}
+            />
+            <Label htmlFor="addRelationship" className="font-semibold">
+              Add relationship to existing member
+              {preselectedRelationship && (
+                <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  Pre-configured
+                </span>
+              )}
+            </Label>
+          </div>
+
+          {relationshipData.enabled && (
+            <div className="space-y-3 pl-6 border-l-2 border-primary-200">
+              <div>
+                <Label htmlFor="relatedMember">Related to *</Label>
+                <select
+                  id="relatedMember"
+                  value={relationshipData.relatedMemberId}
+                  onChange={(e) =>
+                    setRelationshipData({
+                      ...relationshipData,
+                      relatedMemberId: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required={relationshipData.enabled}
+                  disabled={!!preselectedRelationship}
+                >
+                  <option value="">Select a family member</option>
+                  {existingMembers.map((existingMember) => (
+                    <option key={existingMember.id} value={existingMember.id}>
+                      {existingMember.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="relationshipType">This person is their *</Label>
+                <select
+                  id="relationshipType"
+                  value={relationshipData.relationshipType}
+                  onChange={(e) =>
+                    setRelationshipData({
+                      ...relationshipData,
+                      relationshipType: e.target.value as 'PARENT' | 'CHILD' | 'SPOUSE' | 'SIBLING',
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required={relationshipData.enabled}
+                  disabled={!!preselectedRelationship}
+                >
+                  <option value="">Select relationship type</option>
+                  <option value="PARENT">Parent</option>
+                  <option value="CHILD">Child</option>
+                  <option value="SPOUSE">Spouse</option>
+                  <option value="SIBLING">Sibling</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  {preselectedRelationship ? (
+                    <span className="text-green-700 font-medium">
+                      This relationship has been pre-configured based on your selection
+                    </span>
+                  ) : (
+                    'Example: If adding your mother, select your name above and choose "Parent"'
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3 pt-4">
         <Button type="submit" disabled={loading} className="flex-1">

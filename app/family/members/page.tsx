@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { MemberForm } from '@/components/family/member-form';
+import { RelationshipManager } from '@/components/family/relationship-manager';
 
 interface FamilyMember {
   id: string;
@@ -275,7 +276,7 @@ export default function FamilyMembersPage() {
           {members.length > 0 && (
             <div className="mt-8 bg-white rounded-lg border border-slate-200 p-6">
               <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <Button
                   variant="outline"
                   onClick={() => router.push('/family/tree')}
@@ -299,6 +300,16 @@ export default function FamilyMembersPage() {
                   </div>
                 </Button>
               </div>
+
+              {/* Relationship Manager */}
+              {members.length >= 2 && (
+                <div className="pt-4 border-t">
+                  <RelationshipManager
+                    members={members.map(m => ({ id: m.id, name: m.name }))}
+                    onSuccess={fetchMembers}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -319,6 +330,7 @@ export default function FamilyMembersPage() {
               fetchMembers();
             }}
             onCancel={() => setShowAddModal(false)}
+            existingMembers={members.map(m => ({ id: m.id, name: m.name }))}
           />
         </DialogContent>
       </Dialog>

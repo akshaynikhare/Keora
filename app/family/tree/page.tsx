@@ -22,7 +22,7 @@ const MultiLevelListView = dynamic(
   { ssr: false }
 );
 
-type ViewMode = 'list' | 'tree' | 'print';
+type ViewMode = 'list' | 'tree';
 type Orientation = 'TB' | 'BT';
 type PaperSize = 'A4' | 'A3' | 'A2';
 
@@ -66,6 +66,9 @@ export default function FamilyTreePage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [orientation, setOrientation] = useState<Orientation>('TB');
   const [paperSize, setPaperSize] = useState<PaperSize>('A4');
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showLegend, setShowLegend] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -107,6 +110,145 @@ export default function FamilyTreePage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportPNG = async () => {
+    setExporting(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
+
+      if (!reactFlowElement) {
+        throw new Error('Tree visualization not found');
+      }
+
+      toast({
+        title: 'Exporting...',
+        description: 'Generating high-resolution PNG image',
+      });
+
+      // Hide legend panels if showLegend is false
+      const legendPanels = document.querySelectorAll('.react-flow__panel');
+      const originalDisplay: string[] = [];
+      if (!showLegend) {
+        legendPanels.forEach((panel, index) => {
+          const htmlPanel = panel as HTMLElement;
+          originalDisplay[index] = htmlPanel.style.display;
+          htmlPanel.style.display = 'none';
+        });
+      }
+
+      // Generate high-resolution PNG (2x scale for better quality)
+      const dataUrl = await toPng(reactFlowElement, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      // Restore legend panels display
+      if (!showLegend) {
+        legendPanels.forEach((panel, index) => {
+          const htmlPanel = panel as HTMLElement;
+          htmlPanel.style.display = originalDisplay[index];
+        });
+      }
+
+      // Download the image
+      const link = document.createElement('a');
+      link.download = `family-tree-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      toast({
+        title: 'Success',
+        description: 'Family tree exported as PNG',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Export Failed',
+        description: error.message || 'Failed to export as PNG',
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const { jsPDF } = await import('jspdf');
+      const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
+
+      if (!reactFlowElement) {
+        throw new Error('Tree visualization not found');
+      }
+
+      toast({
+        title: 'Exporting...',
+        description: 'Generating PDF document',
+      });
+
+      // Hide legend panels if showLegend is false
+      const legendPanels = document.querySelectorAll('.react-flow__panel');
+      const originalDisplay: string[] = [];
+      if (!showLegend) {
+        legendPanels.forEach((panel, index) => {
+          const htmlPanel = panel as HTMLElement;
+          originalDisplay[index] = htmlPanel.style.display;
+          htmlPanel.style.display = 'none';
+        });
+      }
+
+      // Generate PNG first
+      const dataUrl = await toPng(reactFlowElement, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      // Restore legend panels display
+      if (!showLegend) {
+        legendPanels.forEach((panel, index) => {
+          const htmlPanel = panel as HTMLElement;
+          htmlPanel.style.display = originalDisplay[index];
+        });
+      }
+
+      // Get dimensions
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      // Create PDF in landscape with appropriate size
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [img.width / 2, img.height / 2], // Scale down for reasonable file size
+      });
+
+      // Add image to PDF
+      pdf.addImage(dataUrl, 'PNG', 0, 0, img.width / 2, img.height / 2);
+
+      // Save PDF
+      pdf.save(`family-tree-${new Date().toISOString().split('T')[0]}.pdf`);
+
+      toast({
+        title: 'Success',
+        description: 'Family tree exported as PDF',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Export Failed',
+        description: error.message || 'Failed to export as PDF',
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -306,13 +448,6 @@ export default function FamilyTreePage() {
                 >
                   🌳 Tree
                 </Button>
-                <Button
-                  size="sm"
-                  variant={viewMode === 'print' ? 'default' : 'ghost'}
-                  onClick={() => setViewMode('print')}
-                >
-                  🖨️ Print
-                </Button>
               </div>
 
               <Button variant="outline" onClick={() => router.push('/dashboard')}>
@@ -348,7 +483,51 @@ export default function FamilyTreePage() {
               {/* Tree View */}
               {viewMode === 'tree' && (
                 <div>
-                  <InteractiveTreeView members={members} orientation={orientation} />
+                  <InteractiveTreeView members={members} orientation={orientation} showLegend={showLegend} />
+
+                  {/* Export and Legend Toggle Buttons Below Tree */}
+                  <div className="mt-6 space-y-4">
+                    {/* Legend Toggle */}
+                    <div className="flex justify-center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowLegend(!showLegend)}
+                        className="gap-2"
+                      >
+                        {showLegend ? '👁️ Hide Legend' : '👁️‍🗨️ Show Legend'}
+                      </Button>
+                    </div>
+
+                    {/* Export Buttons */}
+                    <div className="flex justify-center gap-4 flex-wrap">
+                      <Button
+                        size="lg"
+                        onClick={() => setShowPrintModal(true)}
+                        disabled={exporting}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                      >
+                        🖨️ Print Tree View
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={handleExportPNG}
+                        disabled={exporting}
+                        className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white shadow-lg"
+                      >
+                        {exporting ? '⏳ Exporting...' : '📸 Export as PNG'}
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={handleExportPDF}
+                        disabled={exporting}
+                        className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white shadow-lg"
+                      >
+                        {exporting ? '⏳ Exporting...' : '📄 Export as PDF'}
+                      </Button>
+                    </div>
+                  </div>
+
                   <Card className="mt-8 bg-blue-50 border-blue-200">
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-3">
@@ -361,6 +540,8 @@ export default function FamilyTreePage() {
                             <li>Toggle between Top-Down and Bottom-Up views using the buttons in top-right</li>
                             <li>Spouse relationships are shown with dashed pink lines and ❤️</li>
                             <li>Your profile is highlighted with a gold star ⭐</li>
+                            <li>Export your tree as high-resolution PNG or PDF using the buttons above</li>
+                            <li>Click "Print Tree View" to generate a print-friendly version</li>
                           </ul>
                         </div>
                       </div>
@@ -370,12 +551,12 @@ export default function FamilyTreePage() {
               )}
 
               {/* Print View Modal */}
-              {viewMode === 'print' && (
+              {showPrintModal && (
                 <PrintTreeView
                   members={members}
                   paperSize={paperSize}
                   onPaperSizeChange={setPaperSize}
-                  onClose={() => setViewMode('list')}
+                  onClose={() => setShowPrintModal(false)}
                 />
               )}
             </>

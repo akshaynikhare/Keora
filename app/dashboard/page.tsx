@@ -209,16 +209,16 @@ export default function DashboardPage() {
                 : 'Verify your account to access these features'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Button
               className="h-auto py-4 flex-col"
               variant="outline"
-              onClick={() => isVerified && router.push('/family/members')}
+              onClick={() => isVerified && router.push('/family/tree')}
               disabled={!isVerified}
             >
-              <span className="text-3xl mb-2">👤</span>
-              <span className="font-semibold">Manage Members</span>
-              <span className="text-xs text-gray-500 mt-1">Add & edit family members</span>
+              <span className="text-3xl mb-2">👥</span>
+              <span className="font-semibold">View Your Family</span>
+              <span className="text-xs text-gray-500 mt-1">See all family members</span>
             </Button>
 
             <Button
@@ -228,8 +228,19 @@ export default function DashboardPage() {
               disabled={!isVerified}
             >
               <span className="text-3xl mb-2">🌳</span>
-              <span className="font-semibold">View Family Tree</span>
-              <span className="text-xs text-gray-500 mt-1">Visualize your family</span>
+              <span className="font-semibold">View Your Family Tree</span>
+              <span className="text-xs text-gray-500 mt-1">Visualize relationships</span>
+            </Button>
+
+            <Button
+              className="h-auto py-4 flex-col"
+              variant="outline"
+              onClick={() => isVerified && router.push('/family/members')}
+              disabled={!isVerified}
+            >
+              <span className="text-3xl mb-2">👤</span>
+              <span className="font-semibold">Manage Members</span>
+              <span className="text-xs text-gray-500 mt-1">Add & edit family members</span>
             </Button>
 
             <Button
@@ -252,6 +263,17 @@ export default function DashboardPage() {
               <span className="text-3xl mb-2">⚙️</span>
               <span className="font-semibold">Tree Settings</span>
               <span className="text-xs text-gray-500 mt-1">Privacy & sharing</span>
+            </Button>
+
+            <Button
+              className="h-auto py-4 flex-col"
+              variant="outline"
+              onClick={() => isVerified && router.push('/family/tree?view=tree')}
+              disabled={!isVerified}
+            >
+              <span className="text-3xl mb-2">📊</span>
+              <span className="font-semibold">Tree Visualization</span>
+              <span className="text-xs text-gray-500 mt-1">Interactive tree view</span>
             </Button>
           </CardContent>
         </Card>

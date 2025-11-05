@@ -59,6 +59,7 @@ interface FamilyMember {
 interface InteractiveTreeViewProps {
   members: FamilyMember[];
   orientation: 'TB' | 'BT'; // Top-Bottom or Bottom-Top
+  showLegend?: boolean;
 }
 
 const nodeTypes = {
@@ -69,7 +70,7 @@ const nodeTypes = {
 // Branch colors for different family lines
 const BRANCH_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
-export default function InteractiveTreeView({ members, orientation }: InteractiveTreeViewProps) {
+export default function InteractiveTreeView({ members, orientation, showLegend = true }: InteractiveTreeViewProps) {
   const [currentOrientation, setCurrentOrientation] = useState<'TB' | 'BT'>('TB');
   const [expandedLevels, setExpandedLevels] = useState({ up: false, down: false });
 
@@ -745,49 +746,51 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
         )}
 
         {/* Legend Panel */}
-        <Panel position="top-left" className="bg-white p-3 rounded-lg shadow-md border">
-          <div className="text-xs">
-            <div className="font-semibold mb-2">Legend</div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span>Male</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-                <span>Female</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-white text-[8px]">
-                  ⭐
-                </div>
-                <span>You</span>
-              </div>
-              <div className="border-t pt-1 mt-1">
-                <div className="font-semibold mb-1">Relationships</div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex items-center">
-                    <div className="w-4 h-0.5 bg-blue-500"></div>
-                    <div className="w-0 h-0 border-l-4 border-l-blue-500 border-t-2 border-t-transparent border-b-2 border-b-transparent"></div>
-                  </div>
-                  <span>Parent → Child</span>
+        {showLegend && (
+          <Panel position="top-left" className="bg-white p-3 rounded-lg shadow-md border">
+            <div className="text-xs">
+              <div className="font-semibold mb-2">Legend</div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>Male</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-0.5 bg-pink-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, #ec4899 0, #ec4899 3px, transparent 3px, transparent 6px)' }}></div>
-                  <span>❤️ Spouse</span>
+                  <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                  <span>Female</span>
                 </div>
-              </div>
-              <div className="border-t pt-1 mt-1">
-                <div className="text-[10px] text-gray-500">
-                  Showing 3 levels up/down from you.
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-white text-[8px]">
+                    ⭐
+                  </div>
+                  <span>You</span>
                 </div>
-                 <div className="text-[10px] text-gray-500">
-                  Siblings not shown in tree view.
+                <div className="border-t pt-1 mt-1">
+                  <div className="font-semibold mb-1">Relationships</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center">
+                      <div className="w-4 h-0.5 bg-blue-500"></div>
+                      <div className="w-0 h-0 border-l-4 border-l-blue-500 border-t-2 border-t-transparent border-b-2 border-b-transparent"></div>
+                    </div>
+                    <span>Parent → Child</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-pink-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, #ec4899 0, #ec4899 3px, transparent 3px, transparent 6px)' }}></div>
+                    <span>❤️ Spouse</span>
+                  </div>
+                </div>
+                <div className="border-t pt-1 mt-1">
+                  <div className="text-[10px] text-gray-500">
+                    Showing 3 levels up/down from you.
+                  </div>
+                   <div className="text-[10px] text-gray-500">
+                    Siblings not shown in tree view.
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </Panel>
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   );
