@@ -80,6 +80,8 @@ export async function POST(request: NextRequest) {
         email: user.email,
         mobile: user.mobile,
         photoUrl: user.photoUrl,
+        isAdmin: user.isAdmin,
+        adminRole: user.adminRole,
       },
     });
   } catch (error) {

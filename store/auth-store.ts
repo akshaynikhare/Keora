@@ -7,6 +7,8 @@ interface User {
   email: string;
   mobile: string;
   photoUrl?: string | null;
+  isAdmin?: boolean;
+  adminRole?: 'SUPER_ADMIN' | 'MODERATOR' | 'SUPPORT' | null;
 }
 
 interface AuthState {
@@ -17,11 +19,13 @@ interface AuthState {
   setToken: (token: string) => void;
   login: (user: User, token: string) => void;
   logout: () => void;
+  isAdmin: () => boolean;
+  isSuperAdmin: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -29,6 +33,14 @@ export const useAuthStore = create<AuthState>()(
       setToken: (token) => set({ token }),
       login: (user, token) => set({ user, token, isAuthenticated: true }),
       logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      isAdmin: () => {
+        const { user } = get();
+        return user?.isAdmin === true;
+      },
+      isSuperAdmin: () => {
+        const { user } = get();
+        return user?.isAdmin === true && user?.adminRole === 'SUPER_ADMIN';
+      },
     }),
     {
       name: 'keora-auth-storage',
