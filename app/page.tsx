@@ -1,4 +1,20 @@
+'use client';
+
 export default function Home() {
+  const handleGetStarted = () => {
+    // TODO: Navigate to signup page when created
+    // For now, show alert
+    alert('Sign up functionality will be available soon! The authentication system is already built.');
+  };
+
+  const handleLearnMore = () => {
+    // Scroll to features section
+    const featuresSection = document.querySelector('.grid');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
       <div className="container mx-auto px-4 py-16">
@@ -45,10 +61,16 @@ export default function Home() {
             </div>
 
             <div className="flex gap-4 justify-center mt-8">
-              <button className="bg-primary hover:bg-primary-600 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+              <button
+                onClick={handleGetStarted}
+                className="bg-primary hover:bg-primary-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+              >
                 Get Started
               </button>
-              <button className="bg-white hover:bg-slate-50 text-slate-700 px-8 py-3 rounded-lg font-medium border border-slate-300 transition-colors">
+              <button
+                onClick={handleLearnMore}
+                className="bg-white hover:bg-slate-50 text-slate-700 px-8 py-3 rounded-lg font-medium border border-slate-300 transition-colors"
+              >
                 Learn More
               </button>
             </div>
