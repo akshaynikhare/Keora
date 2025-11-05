@@ -60,53 +60,39 @@ A modern family tree platform where users can build verified family trees, conne
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 20+
-- Docker & Docker Compose
-- PostgreSQL (or use Docker setup)
+### Quick Start
 
-### Installation
+For detailed setup instructions, see **[GETTING_STARTED.md](./GETTING_STARTED.md)**
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Keora
-   ```
+```bash
+# 1. Clone and install
+git clone <repository-url>
+cd Keora
+npm install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# 2. Setup environment
+cp .env.example .env
+# Edit .env with your configuration
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
+# 3. Start database
+docker-compose -f docker-compose.dev.yml up -d
 
-   Update the `.env` file with your configuration:
-   - Database URL
-   - JWT Secret
-   - WhatsApp API credentials
-   - Email service credentials
-   - File storage credentials
+# 4. Setup database (interactive)
+npm run db:setup
 
-4. **Start development database**
-   ```bash
-   docker-compose -f docker-compose.dev.yml up -d
-   ```
+# 5. Start development server
+npm run dev
+```
 
-5. **Run Prisma migrations**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-6. **Start development server**
-   ```bash
-   npm run dev
-   ```
+### Documentation
 
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+- **[GETTING_STARTED.md](./GETTING_STARTED.md)** - Complete setup guide for new developers
+- **[LOCAL_DEV.md](./LOCAL_DEV.md)** - Quick reference for daily development
+- **[DEVELOPER.md](./DEVELOPER.md)** - Technical architecture and API documentation
+- **[USER_GUIDE.md](./USER_GUIDE.md)** - End-user feature guide
+- **[ADMIN_GUIDE.md](./ADMIN_GUIDE.md)** - Admin dashboard documentation
 
 ### Production Deployment
 

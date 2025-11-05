@@ -41,9 +41,22 @@ docker-compose -f docker-compose.dev.yml up -d
 This starts PostgreSQL and Redis in Docker.
 
 **4. Setup Database**
+
+Use the interactive setup script (recommended):
+```bash
+npm run db:setup
+```
+
+This will guide you through:
+- Generating Prisma Client
+- Pushing database schema
+- Creating test users (optional)
+
+Or manually:
 ```bash
 npx prisma generate
 npx prisma db push
+npm run db:seed    # Optional: Create test users
 ```
 
 **5. Run Development Server**
@@ -102,15 +115,30 @@ npx prisma studio
 ```
 Opens at http://localhost:5555
 
+### Test Users
+
+If you seeded the database with test users, check `TEST_USERS.md` for credentials.
+
+**Quick login:**
+- **Super Admin:** superadmin@test.com / SuperAdmin123!
+- **Regular User:** jane.smith@test.com / JaneSmith123!
+- **User with Family:** michael.johnson@test.com / Michael123!
+
 ---
 
 ## Common Tasks
+
+### Seed Test Users
+```bash
+npm run db:seed
+```
+Creates admin and app users for testing. Credentials saved in `TEST_USERS.md`.
 
 ### Reset Database
 ```bash
 npx prisma migrate reset
 ```
-⚠️ This deletes all data!
+⚠️ This deletes all data! You'll need to run `npm run db:seed` again.
 
 ### Add New Dependency
 ```bash
