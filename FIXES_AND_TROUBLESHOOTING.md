@@ -247,12 +247,20 @@ docker-compose up -d  # Start PostgreSQL
 **Cause:** Network issues downloading Prisma binaries
 **Fix:** Ensure internet connection, or use `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate`
 
+### Issue: API returns 500 error - "verifyAuth is not a function"
+**Cause:** Missing `verifyAuth` export in auth middleware
+**Fix:** ✅ Fixed in latest commit
+- Added `verifyAuth` function to `lib/auth/middleware.ts`
+- Function properly maps JWT payload to expected user object structure
+- Pull latest changes and restart dev server
+
 ### Issue: API returns 500 error when creating family members
 **Cause:** Either Prisma client not generated, or user attempting to create member while unverified
 **Fix:**
 - Ensure database is set up: `npm run db:setup`
 - Ensure user is verified before attempting to create family members
 - Check server logs for detailed error messages (now includes error details in response)
+- Pull latest changes to get verifyAuth fix
 
 ---
 
