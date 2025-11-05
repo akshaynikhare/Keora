@@ -24,13 +24,23 @@ interface FamilyMember {
   isPrimary: boolean;
   relationshipsFrom: Array<{
     id: string;
+    memberId1: string;
+    memberId2: string;
     relationshipType: string;
-    member2Id: string;
+    member2: {
+      id: string;
+      name: string;
+    };
   }>;
   relationshipsTo: Array<{
     id: string;
+    memberId1: string;
+    memberId2: string;
     relationshipType: string;
-    member1Id: string;
+    member1: {
+      id: string;
+      name: string;
+    };
   }>;
 }
 
@@ -83,10 +93,10 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Find parents (members who have this member as a child)
       member.relationshipsTo.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          const relKey = getRelKey(rel.member1Id, member.id);
+          const relKey = getRelKey(rel.memberId1, member.id);
           if (!processedRelationships.has(relKey)) {
             processedRelationships.add(relKey);
-            assignGenerations(rel.member1Id, generation - 1);
+            assignGenerations(rel.memberId1, generation - 1);
           }
         }
       });
@@ -94,10 +104,10 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Find children
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          const relKey = getRelKey(member.id, rel.member2Id);
+          const relKey = getRelKey(member.id, rel.memberId2);
           if (!processedRelationships.has(relKey)) {
             processedRelationships.add(relKey);
-            assignGenerations(rel.member2Id, generation + 1);
+            assignGenerations(rel.memberId2, generation + 1);
           }
         }
       });
@@ -105,15 +115,15 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Find spouse (same generation)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          if (!visited.has(rel.member2Id)) {
-            assignGenerations(rel.member2Id, generation);
+          if (!visited.has(rel.memberId2)) {
+            assignGenerations(rel.memberId2, generation);
           }
         }
       });
       member.relationshipsTo.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          if (!visited.has(rel.member1Id)) {
-            assignGenerations(rel.member1Id, generation);
+          if (!visited.has(rel.memberId1)) {
+            assignGenerations(rel.memberId1, generation);
           }
         }
       });
@@ -121,15 +131,15 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Find siblings (same generation)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SIBLING') {
-          if (!visited.has(rel.member2Id)) {
-            assignGenerations(rel.member2Id, generation);
+          if (!visited.has(rel.memberId2)) {
+            assignGenerations(rel.memberId2, generation);
           }
         }
       });
       member.relationshipsTo.forEach((rel) => {
         if (rel.relationshipType === 'SIBLING') {
-          if (!visited.has(rel.member1Id)) {
-            assignGenerations(rel.member1Id, generation);
+          if (!visited.has(rel.memberId1)) {
+            assignGenerations(rel.memberId1, generation);
           }
         }
       });
@@ -207,15 +217,15 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Parent-child relationships (only from parent to child)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          const edgeKey = `parent-${member.id}-${rel.member2Id}`;
-          const reverseKey = `parent-${rel.member2Id}-${member.id}`;
+          const edgeKey = `parent-${member.id}-${rel.memberId2}`;
+          const reverseKey = `parent-${rel.memberId2}-${member.id}`;
 
           if (!edgeSet.has(edgeKey) && !edgeSet.has(reverseKey)) {
             edgeSet.add(edgeKey);
             edges.push({
               id: edgeKey,
               source: member.id,
-              target: rel.member2Id,
+              target: rel.memberId2,
               type: 'smoothstep',
               animated: false,
               style: {
@@ -236,7 +246,7 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Spouse relationships (horizontal line with heart)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          const ids = [member.id, rel.member2Id].sort();
+          const ids = [member.id, rel.memberId2].sort();
           const edgeKey = `spouse-${ids[0]}-${ids[1]}`;
 
           if (!edgeSet.has(edgeKey)) {
@@ -263,7 +273,7 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Sibling relationships (dashed line)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SIBLING') {
-          const ids = [member.id, rel.member2Id].sort();
+          const ids = [member.id, rel.memberId2].sort();
           const edgeKey = `sibling-${ids[0]}-${ids[1]}`;
 
           if (!edgeSet.has(edgeKey)) {
