@@ -71,6 +71,20 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authResult.user.id;
+
+    // Check if user is verified
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { verifiedAt: true },
+    });
+
+    if (!user || !user.verifiedAt) {
+      return NextResponse.json(
+        { error: 'Please verify your email and mobile number first' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     // Validate request body
@@ -122,8 +136,17 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Error creating family member:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
-      { error: 'Failed to create family member' },
+      {
+        error: 'Failed to create family member',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

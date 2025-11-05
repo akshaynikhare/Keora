@@ -29,6 +29,9 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
+  // Check if user is verified
+  const isVerified = !!user.verifiedAt;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -59,6 +62,31 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Verification Warning Banner */}
+        {!isVerified && (
+          <Card className="bg-amber-50 border-amber-200 mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 text-lg">Email/Mobile Verification Required</h3>
+                  <p className="text-sm text-amber-800 mt-1">
+                    Please verify your email and mobile number to access family tree features.
+                    You won't be able to add family members or use other features until your account is verified.
+                  </p>
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    onClick={() => router.push(`/verify?userId=${user.id}`)}
+                  >
+                    Verify Now →
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
           <p className="mt-2 text-gray-600">Welcome to your Keora family tree dashboard</p>
@@ -101,13 +129,18 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Get started with building your family tree</CardDescription>
+            <CardDescription>
+              {isVerified
+                ? 'Get started with building your family tree'
+                : 'Verify your account to access these features'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Button
               className="h-auto py-4 flex-col"
               variant="outline"
-              onClick={() => router.push('/family/members')}
+              onClick={() => isVerified && router.push('/family/members')}
+              disabled={!isVerified}
             >
               <span className="text-3xl mb-2">👤</span>
               <span className="font-semibold">Manage Members</span>
@@ -117,7 +150,8 @@ export default function DashboardPage() {
             <Button
               className="h-auto py-4 flex-col"
               variant="outline"
-              onClick={() => router.push('/family/tree')}
+              onClick={() => isVerified && router.push('/family/tree')}
+              disabled={!isVerified}
             >
               <span className="text-3xl mb-2">🌳</span>
               <span className="font-semibold">View Family Tree</span>
@@ -127,7 +161,8 @@ export default function DashboardPage() {
             <Button
               className="h-auto py-4 flex-col"
               variant="outline"
-              onClick={() => router.push('/family/links')}
+              onClick={() => isVerified && router.push('/family/links')}
+              disabled={!isVerified}
             >
               <span className="text-3xl mb-2">🤝</span>
               <span className="font-semibold">Link Requests</span>
@@ -137,7 +172,8 @@ export default function DashboardPage() {
             <Button
               className="h-auto py-4 flex-col"
               variant="outline"
-              onClick={() => router.push('/family/settings')}
+              onClick={() => isVerified && router.push('/family/settings')}
+              disabled={!isVerified}
             >
               <span className="text-3xl mb-2">⚙️</span>
               <span className="font-semibold">Tree Settings</span>
@@ -175,7 +211,8 @@ export default function DashboardPage() {
                   size="sm"
                   variant="link"
                   className="px-0 mt-1"
-                  onClick={() => router.push('/family/members')}
+                  onClick={() => isVerified && router.push('/family/members')}
+                  disabled={!isVerified}
                 >
                   Add family member →
                 </Button>
@@ -193,7 +230,8 @@ export default function DashboardPage() {
                   size="sm"
                   variant="link"
                   className="px-0 mt-1"
-                  onClick={() => router.push('/family/members')}
+                  onClick={() => isVerified && router.push('/family/members')}
+                  disabled={!isVerified}
                 >
                   Manage members →
                 </Button>
@@ -211,7 +249,8 @@ export default function DashboardPage() {
                   size="sm"
                   variant="link"
                   className="px-0 mt-1"
-                  onClick={() => router.push('/family/settings')}
+                  onClick={() => isVerified && router.push('/family/settings')}
+                  disabled={!isVerified}
                 >
                   Configure settings →
                 </Button>
@@ -229,7 +268,8 @@ export default function DashboardPage() {
                   size="sm"
                   variant="link"
                   className="px-0 mt-1"
-                  onClick={() => router.push('/family/links')}
+                  onClick={() => isVerified && router.push('/family/links')}
+                  disabled={!isVerified}
                 >
                   View link requests →
                 </Button>

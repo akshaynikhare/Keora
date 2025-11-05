@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         photoUrl: user.photoUrl,
         isAdmin: user.isAdmin,
         adminRole: user.adminRole,
+        verifiedAt: user.verifiedAt ? user.verifiedAt.toISOString() : null,
       },
     });
   } catch (error) {

@@ -71,6 +71,29 @@ Expected: No 404 errors, no logout
 
 ---
 
+### 4. Unverified User Dashboard Restrictions
+**Problem:** Unverified users could access family tree features from the dashboard.
+
+**Solution:** ✅ Fixed
+- Dashboard now shows a prominent warning banner for unverified users
+- All quick action buttons are disabled for unverified users
+- Getting Started guide buttons are also disabled
+- API endpoints now check verification status before allowing member creation
+- Clear "Verify Now" button redirects to verification page
+
+**Test:**
+```
+Email: john.doe@test.com
+Password: JohnDoe123!
+Expected:
+- See amber warning banner at top
+- All family management buttons disabled
+- "Verify Now" button present
+- Clicking on disabled buttons does nothing
+```
+
+---
+
 ## ⚠️ Known Issue: Family Members Not Loading
 
 ### Problem
@@ -223,6 +246,13 @@ docker-compose up -d  # Start PostgreSQL
 ### Issue: Cannot generate Prisma client
 **Cause:** Network issues downloading Prisma binaries
 **Fix:** Ensure internet connection, or use `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate`
+
+### Issue: API returns 500 error when creating family members
+**Cause:** Either Prisma client not generated, or user attempting to create member while unverified
+**Fix:**
+- Ensure database is set up: `npm run db:setup`
+- Ensure user is verified before attempting to create family members
+- Check server logs for detailed error messages (now includes error details in response)
 
 ---
 

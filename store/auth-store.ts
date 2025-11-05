@@ -9,6 +9,7 @@ interface User {
   photoUrl?: string | null;
   isAdmin?: boolean;
   adminRole?: 'SUPER_ADMIN' | 'MODERATOR' | 'SUPPORT' | null;
+  verifiedAt?: string | null;
 }
 
 interface AuthState {
