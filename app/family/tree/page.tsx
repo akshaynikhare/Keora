@@ -6,6 +6,21 @@ import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ReactFlow component to avoid SSR issues
+const InteractiveTreeView = dynamic(
+  () => import('@/components/family/interactive-tree-view'),
+  { ssr: false }
+);
+const PrintTreeView = dynamic(
+  () => import('@/components/family/print-tree-view'),
+  { ssr: false }
+);
+
+type ViewMode = 'list' | 'tree' | 'print';
+type Orientation = 'TB' | 'BT';
+type PaperSize = 'A4' | 'A3' | 'A2';
 
 interface FamilyMember {
   id: string;
@@ -34,6 +49,9 @@ export default function FamilyTreePage() {
   const { toast } = useToast();
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [orientation, setOrientation] = useState<Orientation>('TB');
+  const [paperSize, setPaperSize] = useState<PaperSize>('A4');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -246,9 +264,9 @@ export default function FamilyTreePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 mb-2">Family Tree</h1>
               <p className="text-slate-600">
@@ -257,7 +275,32 @@ export default function FamilyTreePage() {
                 } generation{Object.values(generations).filter((g) => g.length > 0).length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              {/* View Mode Toggles */}
+              <div className="flex gap-2 bg-white rounded-lg p-1 shadow-sm border">
+                <Button
+                  size="sm"
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('list')}
+                >
+                  📋 List
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'tree' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('tree')}
+                >
+                  🌳 Tree
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'print' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('print')}
+                >
+                  🖨️ Print
+                </Button>
+              </div>
+
               <Button variant="outline" onClick={() => router.push('/dashboard')}>
                 ← Back
               </Button>
@@ -282,8 +325,10 @@ export default function FamilyTreePage() {
               </CardContent>
             </Card>
           ) : (
-            /* Generations View */
-            <div className="space-y-8">
+            <>
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="space-y-8">
               {Object.entries(generations).map(([generation, membersList]) => {
                 if (membersList.length === 0) return null;
 
@@ -304,23 +349,43 @@ export default function FamilyTreePage() {
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* Info Card */}
-          {members.length > 0 && (
-            <Card className="mt-8 bg-blue-50 border-blue-200">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">💡</span>
-                  <div className="text-sm text-blue-900">
-                    <strong>Tip:</strong> Add relationships between family members in the "Manage Members" section
-                    to build a complete family tree structure.  For a visual graph view, consider implementing a
-                    React Flow visualization.
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+
+              {/* Tree View */}
+              {viewMode === 'tree' && (
+                <div>
+                  <InteractiveTreeView members={members} orientation={orientation} />
+                  <Card className="mt-8 bg-blue-50 border-blue-200">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">💡</span>
+                        <div className="text-sm text-blue-900">
+                          <strong>Tips:</strong>
+                          <ul className="list-disc ml-5 mt-2 space-y-1">
+                            <li>Use the controls in the bottom-left to zoom in/out</li>
+                            <li>Click and drag to pan around the tree</li>
+                            <li>Toggle between Top-Down and Bottom-Up views using the buttons in top-right</li>
+                            <li>Spouse relationships are shown with dashed pink lines and ❤️</li>
+                            <li>Your profile is highlighted with a gold star ⭐</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Print View Modal */}
+              {viewMode === 'print' && (
+                <PrintTreeView
+                  members={members}
+                  paperSize={paperSize}
+                  onPaperSizeChange={setPaperSize}
+                  onClose={() => setViewMode('list')}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
