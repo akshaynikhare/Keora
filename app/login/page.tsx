@@ -39,6 +39,17 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle unverified user case
+        if (res.status === 403 && data.userId) {
+          toast({
+            title: 'Email/Mobile Verification Required',
+            description: 'Please verify your email and mobile number to continue.',
+            variant: 'destructive',
+          });
+          // Redirect to verification page with userId
+          router.push(`/verify?userId=${data.userId}`);
+          return;
+        }
         throw new Error(data.error || 'Login failed');
       }
 
@@ -50,8 +61,12 @@ export default function LoginPage() {
         description: 'You have successfully logged in.',
       });
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on user role
+      if (data.user.isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: 'Login Failed',
