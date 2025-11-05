@@ -1,20 +1,70 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface UserStats {
+  familyMembers: number;
+  connections: number;
+  treeVisibility: 'PRIVATE' | 'FAMILY' | 'PUBLIC';
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
+  const [stats, setStats] = useState<UserStats>({
+    familyMembers: 0,
+    connections: 0,
+    treeVisibility: 'PRIVATE',
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.push('/login');
     }
   }, [isAuthenticated, user, router]);
+
+  // Fetch user stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user || !isAuthenticated) return;
+
+      try {
+        const authToken = typeof window !== 'undefined' ? localStorage.getItem('keora-auth-storage') : null;
+        if (!authToken) return;
+
+        const authData = JSON.parse(authToken);
+        const token = authData?.state?.token;
+
+        if (!token) return;
+
+        const response = await fetch('/api/user-stats', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            familyMembers: data.familyMembers,
+            connections: data.connections,
+            treeVisibility: data.treeVisibility,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [user, isAuthenticated]);
 
   if (!user) {
     return (
@@ -99,8 +149,16 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-gray-600">Family Members</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">0</div>
-              <p className="text-xs text-gray-500 mt-1">Start building your tree</p>
+              {loadingStats ? (
+                <div className="text-3xl font-bold text-gray-400">...</div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-gray-900">{stats.familyMembers}</div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.familyMembers === 0 ? 'Start building your tree' : 'Members in your tree'}
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -109,8 +167,16 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-gray-600">Connections</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">0</div>
-              <p className="text-xs text-gray-500 mt-1">Link requests sent</p>
+              {loadingStats ? (
+                <div className="text-3xl font-bold text-gray-400">...</div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-gray-900">{stats.connections}</div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.connections === 0 ? 'No connections yet' : 'Connected families'}
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -119,8 +185,16 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-gray-600">Tree Visibility</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">Private</div>
-              <p className="text-xs text-gray-500 mt-1">Change in settings</p>
+              {loadingStats ? (
+                <div className="text-3xl font-bold text-gray-400">...</div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-gray-900 capitalize">
+                    {stats.treeVisibility.toLowerCase()}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Change in settings</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
