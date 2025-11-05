@@ -46,3 +46,25 @@ export function requireAuth(handler: (request: NextRequest, user: JWTPayload) =>
     return handler(request, user);
   };
 }
+
+export async function verifyAuth(request: NextRequest): Promise<{
+  authenticated: boolean;
+  user: (JWTPayload & { id: string }) | null;
+}> {
+  const payload = await authenticate(request);
+
+  if (!payload) {
+    return {
+      authenticated: false,
+      user: null,
+    };
+  }
+
+  return {
+    authenticated: true,
+    user: {
+      ...payload,
+      id: payload.userId,
+    },
+  };
+}
