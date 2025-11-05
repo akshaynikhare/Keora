@@ -64,8 +64,14 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
     const generationsMap = new Map<string, number>();
     const visited = new Set<string>();
     const branchColorMap = new Map<string, string>();
+    const processedRelationships = new Set<string>();
 
-    // Assign generation levels using BFS
+    // Helper to get relationship key (to avoid duplicates)
+    const getRelKey = (id1: string, id2: string) => {
+      return [id1, id2].sort().join('-');
+    };
+
+    // Assign generation levels using BFS with proper parent-child tracking
     const assignGenerations = (startMemberId: string, generation: number) => {
       if (visited.has(startMemberId)) return;
       visited.add(startMemberId);
@@ -77,26 +83,54 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Find parents (members who have this member as a child)
       member.relationshipsTo.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          assignGenerations(rel.member1Id, generation - 1);
+          const relKey = getRelKey(rel.member1Id, member.id);
+          if (!processedRelationships.has(relKey)) {
+            processedRelationships.add(relKey);
+            assignGenerations(rel.member1Id, generation - 1);
+          }
         }
       });
 
       // Find children
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          assignGenerations(rel.member2Id, generation + 1);
+          const relKey = getRelKey(member.id, rel.member2Id);
+          if (!processedRelationships.has(relKey)) {
+            processedRelationships.add(relKey);
+            assignGenerations(rel.member2Id, generation + 1);
+          }
         }
       });
 
       // Find spouse (same generation)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          assignGenerations(rel.member2Id, generation);
+          if (!visited.has(rel.member2Id)) {
+            assignGenerations(rel.member2Id, generation);
+          }
         }
       });
       member.relationshipsTo.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          assignGenerations(rel.member1Id, generation);
+          if (!visited.has(rel.member1Id)) {
+            assignGenerations(rel.member1Id, generation);
+          }
+        }
+      });
+
+      // Find siblings (same generation)
+      member.relationshipsFrom.forEach((rel) => {
+        if (rel.relationshipType === 'SIBLING') {
+          if (!visited.has(rel.member2Id)) {
+            assignGenerations(rel.member2Id, generation);
+          }
+        }
+      });
+      member.relationshipsTo.forEach((rel) => {
+        if (rel.relationshipType === 'SIBLING') {
+          if (!visited.has(rel.member1Id)) {
+            assignGenerations(rel.member1Id, generation);
+          }
         }
       });
     };
@@ -170,14 +204,16 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
     const edgeSet = new Set<string>(); // To avoid duplicates
 
     members.forEach((member) => {
-      // Parent-child relationships
+      // Parent-child relationships (only from parent to child)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'PARENT') {
-          const edgeId = `${member.id}-${rel.member2Id}`;
-          if (!edgeSet.has(edgeId)) {
-            edgeSet.add(edgeId);
+          const edgeKey = `parent-${member.id}-${rel.member2Id}`;
+          const reverseKey = `parent-${rel.member2Id}-${member.id}`;
+
+          if (!edgeSet.has(edgeKey) && !edgeSet.has(reverseKey)) {
+            edgeSet.add(edgeKey);
             edges.push({
-              id: edgeId,
+              id: edgeKey,
               source: member.id,
               target: rel.member2Id,
               type: 'smoothstep',
@@ -189,6 +225,8 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
               markerEnd: {
                 type: MarkerType.ArrowClosed,
                 color: branchColorMap.get(member.id) || BRANCH_COLORS[0],
+                width: 20,
+                height: 20,
               },
             });
           }
@@ -198,13 +236,15 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       // Spouse relationships (horizontal line with heart)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'SPOUSE') {
-          const edgeId = `spouse-${member.id}-${rel.member2Id}`;
-          if (!edgeSet.has(edgeId)) {
-            edgeSet.add(edgeId);
+          const ids = [member.id, rel.member2Id].sort();
+          const edgeKey = `spouse-${ids[0]}-${ids[1]}`;
+
+          if (!edgeSet.has(edgeKey)) {
+            edgeSet.add(edgeKey);
             edges.push({
-              id: edgeId,
-              source: member.id,
-              target: rel.member2Id,
+              id: edgeKey,
+              source: ids[0],
+              target: ids[1],
               type: 'straight',
               animated: false,
               style: {
@@ -214,6 +254,31 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
               },
               label: '❤️',
               labelStyle: { fontSize: 16 },
+              labelBgStyle: { fill: 'transparent' },
+            });
+          }
+        }
+      });
+
+      // Sibling relationships (dashed line)
+      member.relationshipsFrom.forEach((rel) => {
+        if (rel.relationshipType === 'SIBLING') {
+          const ids = [member.id, rel.member2Id].sort();
+          const edgeKey = `sibling-${ids[0]}-${ids[1]}`;
+
+          if (!edgeSet.has(edgeKey)) {
+            edgeSet.add(edgeKey);
+            edges.push({
+              id: edgeKey,
+              source: ids[0],
+              target: ids[1],
+              type: 'straight',
+              animated: false,
+              style: {
+                stroke: '#94a3b8',
+                strokeWidth: 2,
+                strokeDasharray: '3,3',
+              },
             });
           }
         }
@@ -272,23 +337,39 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
         <Panel position="top-left" className="bg-white p-3 rounded-lg shadow-md border">
           <div className="text-xs">
             <div className="font-semibold mb-2">Legend</div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span>Male</span>
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-              <span>Female</span>
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-0.5 bg-pink-500" style={{ width: '20px' }}></div>
-              <span>❤️ Spouse</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-white text-[8px]">
-                ⭐
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span>Male</span>
               </div>
-              <span>You</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                <span>Female</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-white text-[8px]">
+                  ⭐
+                </div>
+                <span>You</span>
+              </div>
+              <div className="border-t pt-1 mt-1">
+                <div className="font-semibold mb-1">Relationships</div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center">
+                    <div className="w-4 h-0.5 bg-blue-500"></div>
+                    <div className="w-0 h-0 border-l-4 border-l-blue-500 border-t-2 border-t-transparent border-b-2 border-b-transparent"></div>
+                  </div>
+                  <span>Parent → Child</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-4 h-0.5 bg-pink-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, #ec4899 0, #ec4899 3px, transparent 3px, transparent 6px)' }}></div>
+                  <span>❤️ Spouse</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 bg-slate-400" style={{ backgroundImage: 'repeating-linear-gradient(to right, #94a3b8 0, #94a3b8 2px, transparent 2px, transparent 4px)' }}></div>
+                  <span>Sibling</span>
+                </div>
+              </div>
             </div>
           </div>
         </Panel>

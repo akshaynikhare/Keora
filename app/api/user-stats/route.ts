@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         where: { userId },
         select: {
           visibility: true,
-          allowSearchDiscovery: true,
-          showBirthDates: true,
+          allowSearch: true,
+          showDob: true,
           showLocation: true,
         },
       }),
@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
       treeVisibility: treeSettings?.visibility || 'PRIVATE',
       treeSettings: treeSettings || {
         visibility: 'PRIVATE',
-        allowSearchDiscovery: false,
-        showBirthDates: false,
+        allowSearch: false,
+        showDob: false,
         showLocation: false,
       },
     });
