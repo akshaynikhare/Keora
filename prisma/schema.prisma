@@ -44,6 +44,27 @@ enum VisibilityLevel {
   PUBLIC
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  MODERATOR
+  SUPPORT
+}
+
+enum FlagReason {
+  SPAM
+  INAPPROPRIATE
+  FAKE_PROFILE
+  HARASSMENT
+  OTHER
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  APPROVED
+  REMOVED
+}
+
 model User {
   id              String    @id @default(cuid())
   mobile          String    @unique
@@ -56,6 +77,16 @@ model User {
   location        String?
   verifiedAt      DateTime?
   lastLogin       DateTime?
+
+  // Admin & Security fields
+  isAdmin         Boolean   @default(false)
+  adminRole       AdminRole?
+  isSuspended     Boolean   @default(false)
+  suspendedAt     DateTime?
+  suspendedReason String?
+  loginAttempts   Int       @default(0)
+  lockedUntil     DateTime?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -67,17 +98,26 @@ model User {
   treeSettings      TreeSettings?
   sessions          Session[]
   otpCodes          OTPCode[]
+  adminActions      AuditLog[]
+  socialAccounts    SocialAccount[]
+  flaggedContent    FlaggedContent[]  @relation("FlaggedByUser")
+  reviewedFlags     FlaggedContent[]  @relation("ReviewedByAdmin")
 
   @@index([email])
   @@index([mobile])
+  @@index([isAdmin])
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  device     String?
+  ipAddress  String?
+  userAgent  String?
+  expiresAt  DateTime
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -192,4 +232,66 @@ model TreeSettings {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String   // "user_suspended", "user_deleted", "content_removed", etc.
+  targetType  String?  // "user", "content", "system"
+  targetId    String?
+  details     String?  // JSON string with additional details
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+}
+
+model FlaggedContent {
+  id           String     @id @default(cuid())
+  reporterId   String
+  contentType  String     // "profile", "tree", "post", etc.
+  contentId    String
+  reason       FlagReason
+  description  String?
+  status       FlagStatus @default(PENDING)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  reporter User  @relation("FlaggedByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewedByAdmin", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([contentType])
+  @@index([createdAt])
+}
+
+model SocialAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String   // "google", "facebook", "apple"
+  providerId   String   // ID from the provider
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@index([provider])
 }
