@@ -2,6 +2,24 @@
 
 A modern family tree platform where users can build verified family trees, connect with relatives through mutual approval, and share their heritage seamlessly.
 
+## Preview
+
+### Dashboard
+<img src="_preview/dashboard.png" width="600" alt="Dashboard">
+
+### Family Tree View
+<img src="_preview/tree_view.png" width="600" alt="Tree View">
+
+### Link Requests
+<img src="_preview/link.png" width="600" alt="Link Requests">
+
+### Admin Dashboard - User Management
+<img src="_preview/admin_dash_user.png" width="600" alt="Admin User Management">
+
+### Admin Dashboard - Moderation
+<img src="_preview/admin_dash_modration.png" width="600" alt="Admin Moderation">
+
+
 ## Features Implemented
 
 ### Core Foundation

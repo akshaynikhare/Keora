@@ -3,7 +3,10 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Edit2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import MemberPreviewModal from './member-preview-modal';
+import EditMemberModal from './edit-member-modal';
 
 interface FamilyMember {
   id: string;
@@ -48,9 +51,85 @@ const VISIBLE_LEVELS_UP = 3;
 const VISIBLE_LEVELS_DOWN = 3;
 
 export default function MultiLevelListView({ members }: MultiLevelListViewProps) {
+  const { toast } = useToast();
   const [expandedUp, setExpandedUp] = useState(false);
   const [expandedDown, setExpandedDown] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const primaryRef = useRef<HTMLDivElement>(null);
+
+  const handleEditMember = (memberId: string) => {
+    const member = members.find((m) => m.id === memberId);
+    if (member) {
+      setEditingMember(member);
+      setSelectedMember(null); // Close preview modal if open
+    }
+  };
+
+  const handleSaveMember = async (updatedData: Partial<FamilyMember>) => {
+    if (!editingMember) return;
+
+    try {
+      const token = localStorage.getItem('keora-auth-storage');
+      const parsedToken = token ? JSON.parse(token) : null;
+      const authToken = parsedToken?.state?.token;
+
+      if (!authToken) {
+        throw new Error('Not authenticated. Please log in again.');
+      }
+
+      // Clean up the data - convert empty strings to null for optional fields
+      const cleanedData = {
+        ...updatedData,
+        photoUrl: updatedData.photoUrl?.trim() || null,
+        bio: updatedData.bio?.trim() || null,
+        location: updatedData.location?.trim() || null,
+        dob: updatedData.dob || null,
+      };
+
+      console.log('Sending update request:', cleanedData);
+
+      const response = await fetch(`/api/family-members/${editingMember.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(cleanedData),
+      });
+
+      const data = await response.json();
+
+      console.log('Update response:', { status: response.status, data });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Session expired. Please log in again.');
+        }
+        if (response.status === 400 && data.details) {
+          // Validation errors
+          const errorMessages = data.details.map((d: any) => d.message).join(', ');
+          throw new Error(`Validation error: ${errorMessages}`);
+        }
+        throw new Error(data.error || 'Failed to update member');
+      }
+
+      // Success - close modal and reload to show updated data
+      setEditingMember(null);
+      toast({
+        title: 'Success',
+        description: 'Member information updated successfully. Refreshing...',
+      });
+
+      // Small delay to show toast before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      throw error;
+    }
+  };
 
   // Calculate generations based on primary user
   const { generations, primaryLevel, stats } = useMemo(() => {
@@ -239,9 +318,22 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
     const age = calculateAge(member.dob);
 
     return (
-      <Card className={`hover:shadow-md transition-shadow ${isPrimary ? 'ring-2 ring-amber-500' : ''}`}>
+      <Card className={`hover:shadow-md hover:shadow-blue-200 transition-all ${isPrimary ? 'ring-2 ring-amber-500' : ''} relative group`}>
         <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
+          {/* Edit button - appears on hover */}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditMember(member.id);
+            }}
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+
+          <div className="flex items-start gap-3 cursor-pointer" onClick={() => setSelectedMember(member)}>
             <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 relative">
               {member.photoUrl ? (
                 <img
@@ -399,6 +491,8 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
               <ul className="list-disc ml-5 mt-2 space-y-1">
                 <li>Shows {VISIBLE_LEVELS_UP} generations of ancestors and {VISIBLE_LEVELS_DOWN} generations of descendants by default</li>
                 <li>Click the expand buttons to reveal more generations</li>
+                <li>Click on any member card to view quick preview with +1 level relationships</li>
+                <li>Hover over a card to see the edit button (top-right corner)</li>
                 <li>Your profile is highlighted with a gold star and ring</li>
                 <li>Sibling count is displayed next to your profile</li>
                 <li>Generations are ordered from oldest (top) to youngest (bottom)</li>
@@ -407,6 +501,25 @@ export default function MultiLevelListView({ members }: MultiLevelListViewProps)
           </div>
         </CardContent>
       </Card>
+
+      {/* Member Preview Modal */}
+      {selectedMember && (
+        <MemberPreviewModal
+          member={selectedMember}
+          allMembers={members}
+          onClose={() => setSelectedMember(null)}
+          onEdit={handleEditMember}
+        />
+      )}
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <EditMemberModal
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSave={handleSaveMember}
+        />
+      )}
     </div>
   );
 }

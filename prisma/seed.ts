@@ -286,73 +286,73 @@ async function createFamilyMembers(userId: string, userName: string, userGender?
     },
     // Paternal Grandparents
     {
-      name: `${userName.split(' ')[1] || 'Grandfather'}`,
+      name: `${userName.split(' ')[1] + ' Paternal Grandfather'}`,
       gender: Gender.MALE,
       dob: new Date(userBirthYear - 65, 3, 15),
       bio: 'Paternal grandfather',
     },
     {
-      name: `${userName.split(' ')[1] || 'Grandmother'}`,
+      name: `${userName.split(' ')[1] + ' Paternal Grandmother'}`,
       gender: Gender.FEMALE,
       dob: new Date(userBirthYear - 63, 7, 22),
       bio: 'Paternal grandmother',
     },
     // Maternal Grandparents
     {
-      name: 'Maternal Grandfather',
+      name:  `${userName.split(' ')[1] + ' Maternal Grandfather'}`,
       gender: Gender.MALE,
       dob: new Date(userBirthYear - 68, 1, 10),
       bio: 'Maternal grandfather',
     },
     {
-      name: 'Maternal Grandmother',
+      name:  `${userName.split(' ')[1] + ' Maternal Grandmother'}`,
       gender: Gender.FEMALE,
       dob: new Date(userBirthYear - 66, 11, 5),
       bio: 'Maternal grandmother',
     },
     // Father
     {
-      name: `${userName.split(' ')[1] || 'Father'}`,
+      name: `${userName.split(' ')[1] + ' Father'}`,
       gender: Gender.MALE,
       dob: new Date(userBirthYear - 35, 5, 12),
       bio: 'Father',
     },
     // Mother
     {
-      name: 'Mother',
+      name: `${userName.split(' ')[1] + ' Mother'}`,
       gender: Gender.FEMALE,
       dob: new Date(userBirthYear - 33, 8, 20),
       bio: 'Mother',
     },
     // Siblings
     {
-      name: `${gender === Gender.MALE ? 'Brother' : 'Sister'}`,
+      name: `${gender === Gender.MALE ? userName.split(' ')[1] + ' Siblings Brother' : userName.split(' ')[1] + ' Siblings Sister'}`,
       gender: gender,
       dob: new Date(userBirthYear - 3, 2, 8),
       bio: 'Older sibling',
     },
     {
-      name: `${gender === Gender.MALE ? 'Sister' : 'Brother'}`,
+      name: `${gender === Gender.MALE ? userName.split(' ')[1] + ' Siblings Sister' : userName.split(' ')[1] + ' Siblings Brother'}`,
       gender: spouseGender,
       dob: new Date(userBirthYear + 2, 10, 15),
       bio: 'Younger sibling',
     },
     // Spouse
     {
-      name: 'Spouse',
+      name: `${userName.split(' ')[1] + ' Spouse'}`,
       gender: spouseGender,
       dob: new Date(userBirthYear - 1, 6, 25),
       bio: 'Life partner',
     },
     // Children
     {
-      name: 'First Child',
+      name: `${userName.split(' ')[1] + ' First Child'}`,
       gender: Gender.MALE,
       dob: new Date(userBirthYear + 25, 4, 10),
       bio: 'Eldest child',
     },
     {
-      name: 'Second Child',
+      name: `${userName.split(' ')[1] + ' Second Child'}`,
       gender: Gender.FEMALE,
       dob: new Date(userBirthYear + 28, 9, 18),
       bio: 'Younger child',

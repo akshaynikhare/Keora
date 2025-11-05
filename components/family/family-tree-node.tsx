@@ -1,5 +1,13 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
+import {
+  NORMAL_NODE_WIDTH,
+  LARGE_NODE_WIDTH,
+  getPhotoSize,
+  getTextSize,
+  getBadgeSize,
+  getInitialsSize,
+} from './tree-constants';
 
 interface FamilyMember {
   id: string;
@@ -41,17 +49,47 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
   const nodeColor = member.isPrimary ? '#f59e0b' : branchColor || defaultColor;
 
   // Size based on isLarge prop (primary user is larger)
-  const photoSize = isLarge ? '120px' : '80px';
-  const minWidth = isLarge ? '200px' : '140px';
-  const textSize = isLarge ? 'text-base' : 'text-sm';
-  const badgeSize = isLarge ? 'w-8 h-8 text-base' : 'w-6 h-6 text-xs';
-  const initialsSize = isLarge ? 'text-4xl' : 'text-2xl';
+  // Using constants and helper functions from tree-constants.ts
+  const nodeWidth = isLarge ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+  const photoSize = getPhotoSize(isLarge);
+  const textSize = getTextSize(isLarge);
+  const badgeSize = getBadgeSize(isLarge);
+  const initialsSize = getInitialsSize(isLarge);
 
   return (
     <div className="family-tree-node">
-      <Handle type="target" position={Position.Top} style={{ background: nodeColor, opacity: 0.8 }} />
+      {/* Top Handle - receives connections from parents/above */}
+      <Handle
+        id="top"
+        type="target"
+        position={Position.Top}
+        style={{ background: nodeColor, opacity: 0.8 }}
+      />
 
-      <div className="flex flex-col items-center" style={{ minWidth }}>
+      {/* Left Handle - can send or receive connections */}
+      <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        style={{ background: nodeColor, opacity: 0.8 }}
+      />
+
+      {/* Right Handle - can send or receive connections */}
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        style={{ background: nodeColor, opacity: 0.8 }}
+      />
+
+      {/* Bottom Handle - sends connections to children/below */}
+      <Handle
+        id="bottom"
+        type="source"
+        position={Position.Bottom}
+        style={{ background: nodeColor, opacity: 0.8 }}
+      />
+      <div className="flex flex-col items-center" style={{ width: `${nodeWidth}px` }}>
         {/* Circular Photo */}
         <div
           className="relative mb-2 rounded-full overflow-hidden shadow-lg"
@@ -98,7 +136,7 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
         </div>
       </div>
 
-      <Handle type="source" position={Position.Bottom} style={{ background: nodeColor, opacity: 0.8 }} />
+     
     </div>
   );
 }

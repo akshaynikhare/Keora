@@ -13,7 +13,19 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import FamilyTreeNode from './family-tree-node';
+import HeartNode from './heart-node';
 import { Button } from '@/components/ui/button';
+import {
+  NORMAL_NODE_WIDTH,
+  NORMAL_NODE_HEIGHT,
+  LARGE_NODE_WIDTH,
+  LARGE_NODE_HEIGHT,
+  HEART_NODE_WIDTH,
+  HEART_NODE_HEIGHT,
+  HORIZONTAL_SPACING,
+  VERTICAL_SPACING,
+  SPOUSE_HORIZONTAL_SPACING,
+} from './tree-constants';
 
 interface FamilyMember {
   id: string;
@@ -51,6 +63,7 @@ interface InteractiveTreeViewProps {
 
 const nodeTypes = {
   familyMember: FamilyTreeNode,
+  heart: HeartNode,
 };
 
 // Branch colors for different family lines
@@ -186,10 +199,8 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
     });
 
     // Create nodes with hierarchical layout
+    // Node size and spacing constants imported from tree-constants.ts
     const nodes: Node[] = [];
-    const HORIZONTAL_SPACING = 250;
-    const VERTICAL_SPACING = 220;
-    const SPOUSE_OFFSET = 200;
 
     // Track positions to avoid overlaps
     const positionedMembers = new Set<string>();
@@ -280,13 +291,20 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       const genIndex = sortedGenerations.findIndex(([gen, _]) => gen === actualGeneration);
       const yPos = genIndex >= 0 ? genIndex * VERTICAL_SPACING : generationLevel * VERTICAL_SPACING;
 
+      // Get member info to determine if this member is large (primary)
+      const member = members.find(m => m.id === memberId);
+      const isLarge = member?.isPrimary || false;
+      const memberWidth = isLarge ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+
       // Position this member
       nodePositions.set(memberId, { x: xPos, y: yPos });
       positionedMembers.add(memberId);
 
-      // Position spouse next to this member
+      // Position spouse next to this member (we'll handle heart nodes separately)
       if (spouse && !positionedMembers.has(spouse)) {
-        nodePositions.set(spouse, { x: xPos + SPOUSE_OFFSET, y: yPos });
+        // Position spouse with proper spacing accounting for first spouse's width
+        const spouseX = xPos + memberWidth + SPOUSE_HORIZONTAL_SPACING;
+        nodePositions.set(spouse, { x: spouseX, y: yPos });
         positionedMembers.add(spouse);
       }
     };
@@ -336,18 +354,299 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
       });
     });
 
+    // Track spouse pairs to create heart nodes
+    const spousePairs = new Map<string, { spouse1Id: string; spouse2Id: string; childrenIds: string[] }>();
+    const processedSpouses = new Set<string>();
+
+    // Find all spouse pairs and their children
+    members.forEach((member) => {
+      if (!visibleMembers.has(member.id)) return;
+
+      const spouseRel = member.relationshipsFrom.find(rel => rel.relationshipType === 'SPOUSE');
+      if (spouseRel && visibleMembers.has(spouseRel.memberId2)) {
+        const spouse1Id = member.id;
+        const spouse2Id = spouseRel.memberId2;
+        const pairKey = [spouse1Id, spouse2Id].sort().join('-');
+
+        if (!processedSpouses.has(pairKey)) {
+          processedSpouses.add(pairKey);
+
+          // Find shared children
+          const spouse1Children = member.relationshipsFrom
+            .filter(rel => rel.relationshipType === 'PARENT')
+            .map(rel => rel.memberId2);
+
+          const spouse2 = members.find(m => m.id === spouse2Id);
+          const spouse2Children = spouse2?.relationshipsFrom
+            .filter(rel => rel.relationshipType === 'PARENT')
+            .map(rel => rel.memberId2) || [];
+
+          // Find common children
+          const childrenIds = spouse1Children.filter(childId =>
+            spouse2Children.includes(childId) && visibleMembers.has(childId)
+          );
+
+          spousePairs.set(pairKey, { spouse1Id, spouse2Id, childrenIds });
+        }
+      }
+    });
+
+    // Group spouse pairs by generation (using the generation of spouse1)
+    const spousePairsByGeneration = new Map<number, Array<[string, typeof spousePairs extends Map<any, infer V> ? V : never]>>();
+    spousePairs.forEach((pairInfo, pairKey) => {
+      const generation = generationsMap.get(pairInfo.spouse1Id);
+      if (generation !== undefined) {
+        if (!spousePairsByGeneration.has(generation)) {
+          spousePairsByGeneration.set(generation, []);
+        }
+        spousePairsByGeneration.get(generation)!.push([pairKey, pairInfo]);
+      }
+    });
+
+    // Sort generations from deepest (highest number) to shallowest (lowest number)
+    const sortedGenerationKeys = Array.from(spousePairsByGeneration.keys()).sort((a, b) => b - a);
+
+    // Helper function to position heart and align children for a spouse pair
+    const positionHeartAndChildren = (pairKey: string, pairInfo: { spouse1Id: string; spouse2Id: string; childrenIds: string[] }) => {
+      const { spouse1Id, spouse2Id, childrenIds } = pairInfo;
+
+      if (childrenIds.length === 0) return; // Only create heart if there are children
+
+      const spouse1Pos = nodePositions.get(spouse1Id);
+      const spouse2Pos = nodePositions.get(spouse2Id);
+
+      if (!spouse1Pos || !spouse2Pos) return;
+
+      // Get member info to determine if primary (larger node)
+      const spouse1Member = members.find(m => m.id === spouse1Id);
+      const spouse2Member = members.find(m => m.id === spouse2Id);
+      const isLarge1 = spouse1Member?.isPrimary || false;
+      const isLarge2 = spouse2Member?.isPrimary || false;
+
+      // Get the actual widths of both spouses
+      const spouse1Width = isLarge1 ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+      const spouse2Width = isLarge2 ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+
+      // Calculate the vertical center offset of the parent node using configured sizes
+      // Use the larger node height if either spouse is large
+      const isLarge = isLarge1 || isLarge2;
+      const parentNodeHeight = isLarge ? LARGE_NODE_HEIGHT : NORMAL_NODE_HEIGHT;
+      const heartOffset = parentNodeHeight / 2 - HEART_NODE_HEIGHT / 4;
+
+      // Position heart node between the two spouses horizontally
+      // Calculate center of spouse1 node
+      const spouse1Center = spouse1Pos.x + spouse1Width / 2;
+      // Calculate center of spouse2 node
+      const spouse2Center = spouse2Pos.x + spouse2Width / 2;
+      // Heart should be centered between the two spouse centers
+      const heartX = (spouse1Center + spouse2Center) / 2 - HEART_NODE_WIDTH / 2;
+      const heartY = spouse1Pos.y + heartOffset;
+
+      const heartNodeId = `heart-${pairKey}`;
+
+      // Check if heart node already exists and update, or create new
+      const existingHeartIndex = nodes.findIndex(n => n.id === heartNodeId);
+      if (existingHeartIndex !== -1) {
+        nodes[existingHeartIndex].position = { x: heartX, y: heartY };
+      } else {
+        nodes.push({
+          id: heartNodeId,
+          type: 'heart',
+          position: { x: heartX, y: heartY },
+          data: {
+            color: '#ec4899',
+          },
+        });
+      }
+
+      // Align all children with the heart horizontally
+      // Center the entire sibling group around the heart
+      if (childrenIds.length > 0) {
+        const heartHorizontalCenter = heartX + HEART_NODE_WIDTH / 2;
+
+        // Calculate total width needed for all children and their spouses
+        let totalChildrenWidth = 0;
+        const childWidths: number[] = [];
+
+        childrenIds.forEach(childId => {
+          const childMember = members.find(m => m.id === childId);
+          const childIsLarge = childMember?.isPrimary || false;
+          const childWidth = childIsLarge ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+
+          // Check if child has spouse to account for spouse width too
+          const childSpouse = getSpouse(childId);
+          let totalWidth = childWidth;
+
+          if (childSpouse && visibleMembers.has(childSpouse)) {
+            const spouseMember = members.find(m => m.id === childSpouse);
+            const spouseIsLarge = spouseMember?.isPrimary || false;
+            const spouseWidth = spouseIsLarge ? LARGE_NODE_WIDTH : NORMAL_NODE_WIDTH;
+            totalWidth += SPOUSE_HORIZONTAL_SPACING + spouseWidth;
+          }
+
+          childWidths.push(totalWidth);
+          totalChildrenWidth += totalWidth;
+        });
+
+        // Add spacing between sibling groups (each child + their spouse is a group)
+        const siblingSpacing = 100;
+        totalChildrenWidth += siblingSpacing * (childrenIds.length - 1);
+
+        // Calculate starting X position to center all children around the heart
+        let currentX = heartHorizontalCenter - totalChildrenWidth / 2;
+
+        // Position each child and their spouse
+        childrenIds.forEach((childId, index) => {
+          const childPos = nodePositions.get(childId);
+          if (childPos) {
+            const oldX = childPos.x;
+            const deltaX = currentX - oldX;
+
+            // Update the child's X position
+            nodePositions.set(childId, { x: currentX, y: childPos.y });
+
+            // Update the node in the nodes array if already created
+            const childNodeIndex = nodes.findIndex(n => n.id === childId);
+            if (childNodeIndex !== -1) {
+              nodes[childNodeIndex].position.x = currentX;
+            }
+
+            // Update spouse position if exists
+            const childSpouse = getSpouse(childId);
+            if (childSpouse && visibleMembers.has(childSpouse)) {
+              const spousePos = nodePositions.get(childSpouse);
+              if (spousePos) {
+                const newSpouseX = spousePos.x + deltaX;
+                nodePositions.set(childSpouse, { x: newSpouseX, y: spousePos.y });
+
+                const spouseNodeIndex = nodes.findIndex(n => n.id === childSpouse);
+                if (spouseNodeIndex !== -1) {
+                  nodes[spouseNodeIndex].position.x = newSpouseX;
+                }
+              }
+            }
+
+            // Move to next sibling group position
+            currentX += childWidths[index] + siblingSpacing;
+          }
+        });
+      }
+    };
+
+    // Iterate multiple times through generations (bottom-up) to stabilize positions
+    const MAX_ITERATIONS = 3; // Adjust based on max tree depth
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      // Process from deepest generation to shallowest
+      sortedGenerationKeys.forEach(generation => {
+        const pairsInGeneration = spousePairsByGeneration.get(generation);
+        if (pairsInGeneration) {
+          pairsInGeneration.forEach(([pairKey, pairInfo]) => {
+            positionHeartAndChildren(pairKey, pairInfo);
+          });
+        }
+      });
+    }
+
     // Create edges (only for visible members, exclude siblings)
     const edges: Edge[] = [];
     const edgeSet = new Set<string>(); // To avoid duplicates
 
+    // Track children that are connected via heart nodes
+    const childrenWithHearts = new Set<string>();
+
+    // Create edges for spouse pairs with heart nodes
+    spousePairs.forEach((pairInfo, pairKey) => {
+      const { spouse1Id, spouse2Id, childrenIds } = pairInfo;
+
+      if (childrenIds.length === 0) return;
+
+      const heartNodeId = `heart-${pairKey}`;
+
+      const member1 = members.find(m => m.id === spouse1Id);
+      const member2 = members.find(m => m.id === spouse2Id);
+
+      // Determine who is father and who is mother based on gender
+      let fatherId = spouse1Id;
+      let motherId = spouse2Id;
+
+      if (member1?.gender === 'FEMALE' && member2?.gender === 'MALE') {
+        motherId = spouse1Id;
+        fatherId = spouse2Id;
+      }
+
+      // Determine positions to figure out who is on left vs right
+      const spouse1Pos = nodePositions.get(fatherId);
+      const spouse2Pos = nodePositions.get(motherId);
+
+      // Determine which spouse is on the left
+      const leftSpouseId = spouse1Pos && spouse2Pos && spouse1Pos.x < spouse2Pos.x ? fatherId : motherId;
+      const rightSpouseId = leftSpouseId === fatherId ? motherId : fatherId;
+
+      // Left spouse to heart (using right handle of left spouse, left handle of heart)
+      edges.push({
+        id: `spouse-left-${leftSpouseId}-${heartNodeId}`,
+        source: leftSpouseId,
+        target: heartNodeId,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'straight',
+        animated: true,
+        style: {
+          stroke: '#ec4899',
+          strokeWidth: 3,
+        },
+      });
+
+      // Right spouse to heart (using left handle of right spouse, right handle of heart)
+      edges.push({
+        id: `spouse-right-${rightSpouseId}-${heartNodeId}`,
+        source: rightSpouseId,
+        target: heartNodeId,
+        sourceHandle: 'left',
+        targetHandle: 'right',
+        type: 'straight',
+        animated: true,
+        style: {
+          stroke: '#ec4899',
+          strokeWidth: 3,
+        },
+      });
+
+      // Heart to children (using bottom handle of heart, top handle of children)
+      childrenIds.forEach(childId => {
+        childrenWithHearts.add(childId);
+        edges.push({
+          id: `heart-child-${heartNodeId}-${childId}`,
+          source: heartNodeId,
+          target: childId,
+          sourceHandle: 'bottom',
+          targetHandle: 'top',
+          type: 'smoothstep',
+          animated: false,
+          style: {
+            stroke: branchColorMap.get(spouse1Id) || BRANCH_COLORS[0],
+            strokeWidth: 3,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: branchColorMap.get(spouse1Id) || BRANCH_COLORS[0],
+            width: 20,
+            height: 20,
+          },
+        });
+      });
+    });
+
+    // Create edges for parent-child relationships that don't go through heart nodes
     members.forEach((member) => {
       if (!visibleMembers.has(member.id)) return;
 
-      // Parent-child relationships
-      // Note: In seed data, PARENT type means memberId1 (member) is parent of memberId2 (rel.memberId2)
-      // Arrow should point from parent (member) → child (rel.memberId2)
+      // Parent-child relationships (only for children not connected via heart nodes)
       member.relationshipsFrom.forEach((rel) => {
         if (rel.relationshipType === 'PARENT' && visibleMembers.has(rel.memberId2)) {
+          // Skip if this child is already connected via a heart node
+          if (childrenWithHearts.has(rel.memberId2)) return;
+
           const edgeKey = `parent-${member.id}-${rel.memberId2}`;
           const reverseKey = `parent-${rel.memberId2}-${member.id}`;
 
@@ -355,8 +654,8 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
             edgeSet.add(edgeKey);
             edges.push({
               id: edgeKey,
-              source: member.id,        // Parent (older generation)
-              target: rel.memberId2,    // Child (younger generation)
+              source: member.id,
+              target: rel.memberId2,
               type: 'smoothstep',
               animated: false,
               style: {
@@ -369,33 +668,6 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
                 width: 20,
                 height: 20,
               },
-            });
-          }
-        }
-      });
-
-      // Spouse relationships (horizontal line with heart)
-      member.relationshipsFrom.forEach((rel) => {
-        if (rel.relationshipType === 'SPOUSE' && visibleMembers.has(rel.memberId2)) {
-          const ids = [member.id, rel.memberId2].sort();
-          const edgeKey = `spouse-${ids[0]}-${ids[1]}`;
-
-          if (!edgeSet.has(edgeKey)) {
-            edgeSet.add(edgeKey);
-            edges.push({
-              id: edgeKey,
-              source: ids[0],
-              target: ids[1],
-              type: 'straight',
-              animated: false,
-              style: {
-                stroke: '#ec4899',
-                strokeWidth: 2,
-                strokeDasharray: '5,5',
-              },
-              label: '❤️',
-              labelStyle: { fontSize: 16 },
-              labelBgStyle: { fill: 'transparent' },
             });
           }
         }
@@ -507,7 +779,10 @@ export default function InteractiveTreeView({ members, orientation }: Interactiv
               </div>
               <div className="border-t pt-1 mt-1">
                 <div className="text-[10px] text-gray-500">
-                  Showing 3 levels up/down from you. Siblings not shown in tree view.
+                  Showing 3 levels up/down from you.
+                </div>
+                 <div className="text-[10px] text-gray-500">
+                  Siblings not shown in tree view.
                 </div>
               </div>
             </div>
