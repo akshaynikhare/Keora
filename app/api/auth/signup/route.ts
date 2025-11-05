@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth/password';
 import { createOTPCode } from '@/lib/auth/otp';
+import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -14,6 +15,16 @@ const signupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.SIGNUP);
+    if (!rateLimitResult.allowed) {
+      const resetIn = Math.ceil((rateLimitResult.resetTime - Date.now()) / 60000);
+      return NextResponse.json(
+        { error: `Too many signup attempts. Try again in ${resetIn} minutes.` },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = signupSchema.parse(body);
 
