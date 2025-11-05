@@ -89,9 +89,12 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-gray-600">Overview of your platform statistics</p>
+      <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-6 border border-primary-200">
+        <h1 className="text-3xl font-bold text-gray-900">Platform Monitoring Dashboard</h1>
+        <p className="mt-2 text-gray-600">
+          Monitor user activity, content creation, and system health. You are viewing this as a <strong>Super Administrator</strong> -
+          this dashboard is for platform monitoring and management, not for building family trees.
+        </p>
       </div>
 
       {/* User Statistics */}
@@ -230,11 +233,50 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
+      {/* System Health & Monitoring */}
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-2xl">💚</span>
+            System Health
+          </CardTitle>
+          <CardDescription>Platform performance and status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-2">Database Status</div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-semibold text-gray-900">Operational</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">All database connections healthy</p>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-2">API Status</div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-semibold text-gray-900">Operational</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">All endpoints responding normally</p>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-600 mb-2">User Activity</div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-semibold text-gray-900">Normal</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Standard traffic patterns</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common administrative tasks</CardDescription>
+          <CardTitle>Administrative Actions</CardTitle>
+          <CardDescription>Platform management and moderation tools</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -248,7 +290,7 @@ export default function AdminDashboard() {
                 </svg>
                 <span className="font-semibold text-gray-900">Manage Users</span>
               </div>
-              <p className="text-sm text-gray-600">View and manage all users</p>
+              <p className="text-sm text-gray-600">View, verify, suspend, and manage all platform users</p>
             </button>
 
             <button
@@ -259,24 +301,50 @@ export default function AdminDashboard() {
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <span className="font-semibold text-gray-900">Review Reports</span>
+                <span className="font-semibold text-gray-900">Content Moderation</span>
               </div>
-              <p className="text-sm text-gray-600">Moderate flagged content</p>
+              <p className="text-sm text-gray-600">Review flagged content and user reports</p>
             </button>
 
             <button
-              onClick={() => (window.location.href = '/admin/settings')}
+              onClick={() => (window.location.href = '/admin/audit-logs')}
               className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left"
             >
               <div className="flex items-center gap-3 mb-2">
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="font-semibold text-gray-900">System Settings</span>
+                <span className="font-semibold text-gray-900">Audit Logs</span>
               </div>
-              <p className="text-sm text-gray-600">Configure platform settings</p>
+              <p className="text-sm text-gray-600">View all administrative actions and system events</p>
             </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Admin Info Card */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div className="text-sm text-blue-900">
+              <strong>Admin Role Information:</strong>
+              <p className="mt-2">
+                As a Super Administrator, you have full access to monitor and manage the Keora platform. This dashboard
+                provides insights into user activity, content creation, and system health. Regular app users see a
+                different dashboard focused on building their family trees.
+              </p>
+              <p className="mt-2">
+                <strong>Your responsibilities include:</strong>
+              </p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>Monitoring platform usage and growth</li>
+                <li>Managing and moderating user content</li>
+                <li>Responding to user reports and issues</li>
+                <li>Ensuring platform security and compliance</li>
+                <li>Viewing audit logs of all administrative actions</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>

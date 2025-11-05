@@ -1,10 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 export default function Home() {
+  const router = useRouter();
+
   const handleGetStarted = () => {
-    // TODO: Navigate to signup page when created
-    // For now, show alert
-    alert('Sign up functionality will be available soon! The authentication system is already built.');
+    router.push('/signup');
   };
 
   const handleLearnMore = () => {
