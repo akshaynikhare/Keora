@@ -57,7 +57,8 @@ const TEST_USERS = {
       mobile: '+1234567900',
       password: 'JohnDoe123!',
       dob: new Date('1990-01-15'),
-      bio: 'Unverified user - just signed up',
+      gender: Gender.MALE,
+      bio: 'New user testing signup flow',
       location: 'New York, USA',
       isVerified: false,
     },
@@ -67,7 +68,8 @@ const TEST_USERS = {
       mobile: '+1234567901',
       password: 'JaneSmith123!',
       dob: new Date('1985-05-20'),
-      bio: 'Verified user - no family data yet',
+      gender: Gender.FEMALE,
+      bio: 'Verified user ready to build family tree',
       location: 'Los Angeles, USA',
       isVerified: true,
     },
@@ -77,10 +79,12 @@ const TEST_USERS = {
       mobile: '+1234567902',
       password: 'Michael123!',
       dob: new Date('1980-03-10'),
-      bio: 'Active user with family members',
+      gender: Gender.MALE,
+      bio: 'Family historian with extensive tree',
       location: 'Chicago, USA',
       isVerified: true,
       hasFamily: true,
+      treeVisibility: 'PUBLIC',
     },
     {
       name: 'Emily Davis',
@@ -88,10 +92,12 @@ const TEST_USERS = {
       mobile: '+1234567903',
       password: 'Emily123!',
       dob: new Date('1992-07-25'),
-      bio: 'Active user for testing relationships',
+      gender: Gender.FEMALE,
+      bio: 'Active genealogy researcher',
       location: 'Houston, USA',
       isVerified: true,
       hasFamily: true,
+      treeVisibility: 'FAMILY',
     },
     {
       name: 'Robert Wilson',
@@ -99,10 +105,51 @@ const TEST_USERS = {
       mobile: '+1234567904',
       password: 'Robert123!',
       dob: new Date('1975-11-30'),
-      bio: 'Test user with multiple family connections',
+      gender: Gender.MALE,
+      bio: 'Experienced user with multi-generational tree',
       location: 'Phoenix, USA',
       isVerified: true,
       hasFamily: true,
+      treeVisibility: 'PUBLIC',
+    },
+    {
+      name: 'Sarah Martinez',
+      email: 'sarah.martinez@test.com',
+      mobile: '+1234567905',
+      password: 'Sarah123!',
+      dob: new Date('1988-09-14'),
+      gender: Gender.FEMALE,
+      bio: 'Privacy-focused user',
+      location: 'Miami, USA',
+      isVerified: true,
+      hasFamily: true,
+      treeVisibility: 'PRIVATE',
+    },
+    {
+      name: 'David Brown',
+      email: 'david.brown@test.com',
+      mobile: '+1234567906',
+      password: 'David123!',
+      dob: new Date('1995-12-03'),
+      gender: Gender.MALE,
+      bio: 'Young professional exploring family history',
+      location: 'Seattle, USA',
+      isVerified: true,
+      hasFamily: true,
+      treeVisibility: 'FAMILY',
+    },
+    {
+      name: 'Lisa Anderson',
+      email: 'lisa.anderson@test.com',
+      mobile: '+1234567907',
+      password: 'Lisa123!',
+      dob: new Date('1983-04-22'),
+      gender: Gender.FEMALE,
+      bio: 'Genealogy enthusiast connecting families',
+      location: 'Boston, USA',
+      isVerified: true,
+      hasFamily: true,
+      treeVisibility: 'PUBLIC',
     },
   ],
 };
@@ -178,11 +225,6 @@ async function createTestUsers() {
 
     createdUsers.push(user);
 
-    // Create family members if specified
-    if (appUser.hasFamily) {
-      await createFamilyMembers(user.id, appUser.name);
-    }
-
     console.log(`   ✅ Created ${appUser.name} (${appUser.isVerified ? 'verified' : 'unverified'})`);
   }
 
@@ -196,38 +238,124 @@ async function createTestUsers() {
     });
 
     if (!existingSettings) {
+      const appUser = TEST_USERS.appUsers.find((au) => au.email === user.email);
+      const visibility = appUser?.treeVisibility || 'PRIVATE';
+
       await prisma.treeSettings.create({
         data: {
           userId: user.id,
+          visibility: visibility as any,
+          allowSearch: visibility === 'PUBLIC',
         },
       });
-      console.log(`   ✅ Created tree settings for ${user.name}`);
+      console.log(`   ✅ Created tree settings for ${user.name} (${visibility})`);
+    }
+  }
+
+  // Create family members for users with hasFamily flag
+  console.log('\n📝 Creating family members and relationships...');
+  for (const user of createdUsers) {
+    const appUser = TEST_USERS.appUsers.find((au) => au.email === user.email);
+    if (appUser?.hasFamily) {
+      await createFamilyMembers(user.id, appUser.name, appUser.gender);
     }
   }
 
   return { admins: createdAdmins, users: createdUsers };
 }
 
-async function createFamilyMembers(userId: string, userName: string) {
-  // Create family members for the user
+async function createFamilyMembers(userId: string, userName: string, userGender?: string) {
+  const gender = userGender || Gender.MALE;
+  const spouseGender = gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
+
+  // Get user's DOB to calculate relative ages
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const userDob = user?.dob || new Date('1985-01-01');
+  const userBirthYear = userDob.getFullYear();
+
+  // Create comprehensive family tree
   const members = [
+    // Self (Primary member)
     {
-      name: `${userName} (Self)`,
-      gender: Gender.MALE,
+      name: userName,
+      gender: gender,
+      dob: userDob,
       isPrimary: true,
-      bio: 'Primary family member profile',
+      bio: 'Primary family member (myself)',
+      location: user?.location,
     },
+    // Paternal Grandparents
     {
-      name: `${userName}'s Parent`,
+      name: `${userName.split(' ')[1] || 'Grandfather'}`,
       gender: Gender.MALE,
-      dob: new Date('1950-01-01'),
-      bio: 'Parent in family tree',
+      dob: new Date(userBirthYear - 65, 3, 15),
+      bio: 'Paternal grandfather',
     },
     {
-      name: `${userName}'s Spouse`,
+      name: `${userName.split(' ')[1] || 'Grandmother'}`,
       gender: Gender.FEMALE,
-      dob: new Date('1982-06-15'),
-      bio: 'Spouse in family tree',
+      dob: new Date(userBirthYear - 63, 7, 22),
+      bio: 'Paternal grandmother',
+    },
+    // Maternal Grandparents
+    {
+      name: 'Maternal Grandfather',
+      gender: Gender.MALE,
+      dob: new Date(userBirthYear - 68, 1, 10),
+      bio: 'Maternal grandfather',
+    },
+    {
+      name: 'Maternal Grandmother',
+      gender: Gender.FEMALE,
+      dob: new Date(userBirthYear - 66, 11, 5),
+      bio: 'Maternal grandmother',
+    },
+    // Father
+    {
+      name: `${userName.split(' ')[1] || 'Father'}`,
+      gender: Gender.MALE,
+      dob: new Date(userBirthYear - 35, 5, 12),
+      bio: 'Father',
+    },
+    // Mother
+    {
+      name: 'Mother',
+      gender: Gender.FEMALE,
+      dob: new Date(userBirthYear - 33, 8, 20),
+      bio: 'Mother',
+    },
+    // Siblings
+    {
+      name: `${gender === Gender.MALE ? 'Brother' : 'Sister'}`,
+      gender: gender,
+      dob: new Date(userBirthYear - 3, 2, 8),
+      bio: 'Older sibling',
+    },
+    {
+      name: `${gender === Gender.MALE ? 'Sister' : 'Brother'}`,
+      gender: spouseGender,
+      dob: new Date(userBirthYear + 2, 10, 15),
+      bio: 'Younger sibling',
+    },
+    // Spouse
+    {
+      name: 'Spouse',
+      gender: spouseGender,
+      dob: new Date(userBirthYear - 1, 6, 25),
+      bio: 'Life partner',
+    },
+    // Children
+    {
+      name: 'First Child',
+      gender: Gender.MALE,
+      dob: new Date(userBirthYear + 25, 4, 10),
+      bio: 'Eldest child',
+    },
+    {
+      name: 'Second Child',
+      gender: Gender.FEMALE,
+      dob: new Date(userBirthYear + 28, 9, 18),
+      bio: 'Younger child',
     },
   ];
 
@@ -240,32 +368,193 @@ async function createFamilyMembers(userId: string, userName: string) {
         gender: member.gender,
         dob: member.dob,
         bio: member.bio,
+        location: member.location,
         isPrimary: member.isPrimary || false,
       },
     });
     createdMembers.push(familyMember);
   }
 
-  // Create relationships between family members
-  if (createdMembers.length >= 3) {
-    // Parent-Child relationship
-    await prisma.relationship.create({
-      data: {
-        memberId1: createdMembers[1].id, // Parent
-        memberId2: createdMembers[0].id, // Self
-        relationshipType: 'PARENT',
-      },
-    });
+  // Create relationships
+  const [self, paternalGF, paternalGM, maternalGF, maternalGM, father, mother, olderSibling, youngerSibling, spouse, child1, child2] = createdMembers;
 
-    // Spouse relationship
-    await prisma.relationship.create({
-      data: {
-        memberId1: createdMembers[0].id, // Self
-        memberId2: createdMembers[2].id, // Spouse
-        relationshipType: 'SPOUSE',
-      },
-    });
+  const relationships = [
+    // Grandparents to Parents
+    { from: paternalGF, to: father, type: 'PARENT' },
+    { from: paternalGM, to: father, type: 'PARENT' },
+    { from: maternalGF, to: mother, type: 'PARENT' },
+    { from: maternalGM, to: mother, type: 'PARENT' },
+    // Grandparents as spouses
+    { from: paternalGF, to: paternalGM, type: 'SPOUSE' },
+    { from: maternalGF, to: maternalGM, type: 'SPOUSE' },
+    // Parents to Self
+    { from: father, to: self, type: 'PARENT' },
+    { from: mother, to: self, type: 'PARENT' },
+    // Parents as spouses
+    { from: father, to: mother, type: 'SPOUSE' },
+    // Parents to Siblings
+    { from: father, to: olderSibling, type: 'PARENT' },
+    { from: mother, to: olderSibling, type: 'PARENT' },
+    { from: father, to: youngerSibling, type: 'PARENT' },
+    { from: mother, to: youngerSibling, type: 'PARENT' },
+    // Siblings
+    { from: self, to: olderSibling, type: 'SIBLING' },
+    { from: self, to: youngerSibling, type: 'SIBLING' },
+    // Spouse
+    { from: self, to: spouse, type: 'SPOUSE' },
+    // Children
+    { from: self, to: child1, type: 'PARENT' },
+    { from: spouse, to: child1, type: 'PARENT' },
+    { from: self, to: child2, type: 'PARENT' },
+    { from: spouse, to: child2, type: 'PARENT' },
+    // Children as siblings
+    { from: child1, to: child2, type: 'SIBLING' },
+  ];
+
+  for (const rel of relationships) {
+    try {
+      await prisma.relationship.create({
+        data: {
+          memberId1: rel.from.id,
+          memberId2: rel.to.id,
+          relationshipType: rel.type as any,
+        },
+      });
+    } catch (error) {
+      // Skip if relationship already exists
+    }
   }
+
+  console.log(`      ✅ Created ${createdMembers.length} family members and ${relationships.length} relationships for ${userName}`);
+}
+
+async function createLinkRequests(users: any[]) {
+  console.log('\n📝 Creating link requests between users...');
+
+  // Create some link requests between users
+  const linkRequests = [
+    // Michael -> Emily (Approved - they are cousins)
+    {
+      senderId: users.find((u: any) => u.email === 'michael.johnson@test.com')?.id,
+      receiverId: users.find((u: any) => u.email === 'emily.davis@test.com')?.id,
+      relationshipType: 'SIBLING' as any,
+      message: 'Hi Emily! We are cousins from the Johnson family. Let\'s connect our trees!',
+      status: 'APPROVED' as any,
+    },
+    // Robert -> Lisa (Pending - distant relatives)
+    {
+      senderId: users.find((u: any) => u.email === 'robert.wilson@test.com')?.id,
+      receiverId: users.find((u: any) => u.email === 'lisa.anderson@test.com')?.id,
+      relationshipType: 'SIBLING' as any,
+      message: 'Hello Lisa, I believe we share a common ancestor. Would love to connect!',
+      status: 'PENDING' as any,
+    },
+    // Sarah -> David (Rejected - no relation found)
+    {
+      senderId: users.find((u: any) => u.email === 'sarah.martinez@test.com')?.id,
+      receiverId: users.find((u: any) => u.email === 'david.brown@test.com')?.id,
+      relationshipType: 'SIBLING' as any,
+      message: 'Hi David, checking if we might be related?',
+      status: 'REJECTED' as any,
+    },
+    // David -> Michael (Pending - exploring connection)
+    {
+      senderId: users.find((u: any) => u.email === 'david.brown@test.com')?.id,
+      receiverId: users.find((u: any) => u.email === 'michael.johnson@test.com')?.id,
+      relationshipType: 'SIBLING' as any,
+      message: 'Hi Michael, I found your tree while researching. Let\'s connect!',
+      status: 'PENDING' as any,
+    },
+  ];
+
+  let createdCount = 0;
+  for (const request of linkRequests) {
+    if (request.senderId && request.receiverId) {
+      const existing = await prisma.linkRequest.findFirst({
+        where: {
+          senderId: request.senderId,
+          receiverId: request.receiverId,
+        },
+      });
+
+      if (!existing) {
+        await prisma.linkRequest.create({
+          data: request,
+        });
+        createdCount++;
+      }
+    }
+  }
+
+  console.log(`   ✅ Created ${createdCount} link requests`);
+}
+
+async function createNotifications(users: any[]) {
+  console.log('\n📝 Creating notifications for users...');
+
+  const notifications = [
+    // Notification for Emily about approved link request
+    {
+      userId: users.find((u: any) => u.email === 'emily.davis@test.com')?.id,
+      type: 'LINK_APPROVED' as any,
+      title: 'Link Request Approved',
+      content: 'Michael Johnson accepted your link request. Your trees are now connected!',
+      link: '/dashboard',
+    },
+    // Notification for Lisa about pending request
+    {
+      userId: users.find((u: any) => u.email === 'lisa.anderson@test.com')?.id,
+      type: 'LINK_REQUEST' as any,
+      title: 'New Link Request',
+      content: 'Robert Wilson wants to connect with you. Review the request to accept or decline.',
+      link: '/dashboard',
+    },
+    // Notification for David about rejected request
+    {
+      userId: users.find((u: any) => u.email === 'david.brown@test.com')?.id,
+      type: 'LINK_REJECTED' as any,
+      title: 'Link Request Declined',
+      content: 'Sarah Martinez declined your link request.',
+      link: '/dashboard',
+    },
+    // Notification for Michael about new request
+    {
+      userId: users.find((u: any) => u.email === 'michael.johnson@test.com')?.id,
+      type: 'LINK_REQUEST' as any,
+      title: 'New Link Request',
+      content: 'David Brown wants to connect with you. Review the request.',
+      link: '/dashboard',
+    },
+    // System notification for Jane
+    {
+      userId: users.find((u: any) => u.email === 'jane.smith@test.com')?.id,
+      type: 'SYSTEM' as any,
+      title: 'Welcome to Keora!',
+      content: 'Start building your family tree by adding your first family member.',
+      link: '/getting-started',
+    },
+  ];
+
+  let createdCount = 0;
+  for (const notification of notifications) {
+    if (notification.userId) {
+      const existing = await prisma.notification.findFirst({
+        where: {
+          userId: notification.userId,
+          title: notification.title,
+        },
+      });
+
+      if (!existing) {
+        await prisma.notification.create({
+          data: notification,
+        });
+        createdCount++;
+      }
+    }
+  }
+
+  console.log(`   ✅ Created ${createdCount} notifications`);
 }
 
 async function displayCredentials() {
@@ -322,9 +611,11 @@ async function saveCredentialsToFile() {
     content += `- **Mobile:** ${user.mobile}\n`;
     content += `- **Password:** \`${user.password}\`\n`;
     content += `- **DOB:** ${user.dob.toISOString().split('T')[0]}\n`;
+    content += `- **Gender:** ${user.gender}\n`;
     content += `- **Location:** ${user.location}\n`;
     content += `- **Status:** ${user.isVerified ? '✅ Verified' : '⏳ Unverified'}\n`;
-    content += `- **Family Data:** ${user.hasFamily ? '✅ Has family members and relationships' : '❌ No family data'}\n`;
+    content += `- **Tree Visibility:** ${user.treeVisibility || 'N/A'}\n`;
+    content += `- **Family Data:** ${user.hasFamily ? '✅ Has 12 family members with multi-generational tree' : '❌ No family data'}\n`;
     content += `- **Bio:** ${user.bio}\n\n`;
   });
 
@@ -337,9 +628,24 @@ async function saveCredentialsToFile() {
   content += '- **Admin Dashboard:** http://localhost:3000/admin\n';
   content += '- Only admin users can access the admin dashboard\n\n';
   content += '### Testing Scenarios\n\n';
-  content += '- **Signup Flow:** Use john.doe@test.com to test OTP verification\n';
-  content += '- **Family Tree:** Use michael.johnson@test.com, emily.davis@test.com, or robert.wilson@test.com\n';
-  content += '- **Admin Functions:** Use any admin account to test moderation features\n\n';
+  content += '#### New User Experience\n';
+  content += '- **Unverified User:** john.doe@test.com - Test OTP verification flow\n';
+  content += '- **Fresh User:** jane.smith@test.com - Test getting started and building first tree\n\n';
+  content += '#### Family Tree Features\n';
+  content += '- **Complete Tree:** michael.johnson@test.com - 12 members, 3 generations, PUBLIC visibility\n';
+  content += '- **Private Tree:** sarah.martinez@test.com - Full tree with PRIVATE visibility\n';
+  content += '- **Family Visibility:** emily.davis@test.com or david.brown@test.com - FAMILY visibility\n';
+  content += '- **Multi-Gen Tree:** robert.wilson@test.com or lisa.anderson@test.com - Complex relationships\n\n';
+  content += '#### Link Requests\n';
+  content += '- **Approved Link:** michael.johnson@test.com ↔️ emily.davis@test.com\n';
+  content += '- **Pending Requests:** Check robert.wilson@test.com and david.brown@test.com\n';
+  content += '- **Rejected Request:** sarah.martinez@test.com rejected david.brown@test.com\n\n';
+  content += '#### Admin Functions\n';
+  content += '- **Super Admin:** superadmin@test.com - Full system access\n';
+  content += '- **Moderator:** moderator@test.com - Content moderation\n';
+  content += '- **Support:** support@test.com - User support functions\n\n';
+  content += '#### Notifications\n';
+  content += '- Users with notifications: emily.davis@test.com, lisa.anderson@test.com, david.brown@test.com, michael.johnson@test.com, jane.smith@test.com\n\n';
 
   const filePath = path.join(process.cwd(), 'TEST_USERS.md');
   fs.writeFileSync(filePath, content, 'utf8');
@@ -365,6 +671,12 @@ async function main() {
     console.log('\n✅ Creating test users...\n');
 
     const { admins, users } = await createTestUsers();
+
+    // Create link requests between users
+    await createLinkRequests(users);
+
+    // Create notifications for users
+    await createNotifications(users);
 
     console.log('\n' + '='.repeat(80));
     console.log('✨ SEED COMPLETED SUCCESSFULLY!');

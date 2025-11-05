@@ -116,20 +116,36 @@ async function main() {
 
   // Step 4: Seed test users
   console.log('\n' + '─'.repeat(80));
-  console.log('📝 Step 4: Seed test users...');
+  console.log('📝 Step 4: Seed test users and sample data...');
   console.log('─'.repeat(80));
-  console.log('\n📋 This will create test users for development:');
-  console.log('   • Admin users: Super Admin, Moderator, Support');
-  console.log('   • App users: Various test scenarios (verified, unverified, with family data)');
+  console.log('\n📋 This will create comprehensive test data for development:');
+  console.log('\n👥 Admin Users (3):');
+  console.log('   • Super Admin - Full system access');
+  console.log('   • Moderator - Content moderation');
+  console.log('   • Support - User support functions');
+  console.log('\n👤 App Users (8):');
+  console.log('   • 1 Unverified user (for testing signup/verification)');
+  console.log('   • 1 Verified user (no family data - for testing tree creation)');
+  console.log('   • 6 Verified users with complete family trees');
+  console.log('\n🌳 Family Data:');
+  console.log('   • Each user with family data gets 12 members (3 generations)');
+  console.log('   • Includes grandparents, parents, siblings, spouse, children');
+  console.log('   • Complete relationships between all family members');
+  console.log('\n🔗 Link Requests:');
+  console.log('   • Sample pending, approved, and rejected link requests');
+  console.log('   • Tests connection functionality between users');
+  console.log('\n🔔 Notifications:');
+  console.log('   • Welcome messages and link request notifications');
+  console.log('   • Tests notification system');
 
-  const seedUsers = await askQuestion('\n📝 Do you want to create test users? (y/n): ');
+  const seedUsers = await askQuestion('\n📝 Do you want to create all this test data? (y/n): ');
   if (seedUsers.toLowerCase() === 'y' || seedUsers.toLowerCase() === 'yes') {
-    if (!runCommand('npm run db:seed', 'Creating test users')) {
-      console.log('\n⚠️  Warning: Failed to seed test users. You can run it later with: npm run db:seed\n');
+    if (!runCommand('npm run db:seed', 'Creating comprehensive test data')) {
+      console.log('\n⚠️  Warning: Failed to seed test data. You can run it later with: npm run db:seed\n');
     }
   } else {
-    console.log('\n⏭️  Skipping test user creation.');
-    console.log('\n💡 You can create test users later by running: npm run db:seed\n');
+    console.log('\n⏭️  Skipping test data creation.');
+    console.log('\n💡 You can create test data later by running: npm run db:seed\n');
   }
 
   // Final summary
