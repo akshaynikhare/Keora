@@ -194,7 +194,7 @@ export default function GettingStartedPage() {
     },
     {
       number: 6,
-      title: 'You're All Set!',
+      title: "You're All Set!",
       description: 'Start building your family legacy',
       icon: '🎉',
       content: (

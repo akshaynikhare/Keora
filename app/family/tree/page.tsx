@@ -17,6 +17,10 @@ const PrintTreeView = dynamic(
   () => import('@/components/family/print-tree-view'),
   { ssr: false }
 );
+const MultiLevelListView = dynamic(
+  () => import('@/components/family/multi-level-list-view'),
+  { ssr: false }
+);
 
 type ViewMode = 'list' | 'tree' | 'print';
 type Orientation = 'TB' | 'BT';
@@ -33,13 +37,23 @@ interface FamilyMember {
   isPrimary: boolean;
   relationshipsFrom: Array<{
     id: string;
+    memberId1: string;
+    memberId2: string;
     relationshipType: string;
-    member2: FamilyMember;
+    member2: {
+      id: string;
+      name: string;
+    };
   }>;
   relationshipsTo: Array<{
     id: string;
+    memberId1: string;
+    memberId2: string;
     relationshipType: string;
-    member1: FamilyMember;
+    member1: {
+      id: string;
+      name: string;
+    };
   }>;
 }
 
@@ -328,28 +342,7 @@ export default function FamilyTreePage() {
             <>
               {/* List View */}
               {viewMode === 'list' && (
-                <div className="space-y-8">
-              {Object.entries(generations).map(([generation, membersList]) => {
-                if (membersList.length === 0) return null;
-
-                return (
-                  <div key={generation}>
-                    <div className="flex items-center gap-3 mb-4">
-                      <h2 className="text-2xl font-bold text-slate-900">{generation}</h2>
-                      <div className="flex-1 h-px bg-slate-300"></div>
-                      <span className="text-sm text-slate-600">
-                        {membersList.length} member{membersList.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {membersList.map((member) => (
-                        <MemberCard key={member.id} member={member} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-                </div>
+                <MultiLevelListView members={members} />
               )}
 
               {/* Tree View */}

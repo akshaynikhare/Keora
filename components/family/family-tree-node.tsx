@@ -14,11 +14,12 @@ interface FamilyTreeNodeProps {
   data: {
     member: FamilyMember;
     branchColor: string;
+    isLarge?: boolean;
   };
 }
 
 function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
-  const { member, branchColor } = data;
+  const { member, branchColor, isLarge = false } = data;
 
   const calculateAge = (dob?: string | null) => {
     if (!dob) return null;
@@ -39,19 +40,26 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
   const defaultColor = member.gender === 'MALE' ? '#3b82f6' : member.gender === 'FEMALE' ? '#ec4899' : '#8b5cf6';
   const nodeColor = member.isPrimary ? '#f59e0b' : branchColor || defaultColor;
 
+  // Size based on isLarge prop (primary user is larger)
+  const photoSize = isLarge ? '120px' : '80px';
+  const minWidth = isLarge ? '200px' : '140px';
+  const textSize = isLarge ? 'text-base' : 'text-sm';
+  const badgeSize = isLarge ? 'w-8 h-8 text-base' : 'w-6 h-6 text-xs';
+  const initialsSize = isLarge ? 'text-4xl' : 'text-2xl';
+
   return (
     <div className="family-tree-node">
       <Handle type="target" position={Position.Top} style={{ background: nodeColor, opacity: 0.8 }} />
 
-      <div className="flex flex-col items-center" style={{ minWidth: '140px' }}>
+      <div className="flex flex-col items-center" style={{ minWidth }}>
         {/* Circular Photo */}
         <div
           className="relative mb-2 rounded-full overflow-hidden shadow-lg"
           style={{
-            width: '80px',
-            height: '80px',
-            border: `4px solid ${nodeColor}`,
-            boxShadow: member.isPrimary ? `0 0 0 4px rgba(245, 158, 11, 0.2)` : undefined,
+            width: photoSize,
+            height: photoSize,
+            border: `${isLarge ? '5px' : '4px'} solid ${nodeColor}`,
+            boxShadow: member.isPrimary ? `0 0 0 ${isLarge ? '6px' : '4px'} rgba(245, 158, 11, 0.2)` : undefined,
           }}
         >
           {member.photoUrl ? (
@@ -62,7 +70,7 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
             />
           ) : (
             <div
-              className="w-full h-full flex items-center justify-center text-2xl font-bold"
+              className={`w-full h-full flex items-center justify-center ${initialsSize} font-bold`}
               style={{ backgroundColor: `${nodeColor}20`, color: nodeColor }}
             >
               {member.name.charAt(0).toUpperCase()}
@@ -71,7 +79,7 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
 
           {/* Primary badge */}
           {member.isPrimary && (
-            <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full w-6 h-6 flex items-center justify-center text-white text-xs font-bold shadow-md">
+            <div className={`absolute -top-1 -right-1 bg-amber-500 rounded-full ${badgeSize} flex items-center justify-center text-white font-bold shadow-md`}>
               ⭐
             </div>
           )}
@@ -79,11 +87,11 @@ function FamilyTreeNode({ data }: FamilyTreeNodeProps) {
 
         {/* Name */}
         <div className="text-center bg-white px-3 py-2 rounded-lg shadow-sm border-2" style={{ borderColor: nodeColor }}>
-          <div className="font-semibold text-sm text-gray-900 leading-tight">
+          <div className={`font-semibold ${textSize} text-gray-900 leading-tight`}>
             {member.name}
           </div>
           {birthYear && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className={`${isLarge ? 'text-sm' : 'text-xs'} text-gray-500 mt-1`}>
               {birthYear}{age && ` (${age})`}
             </div>
           )}
